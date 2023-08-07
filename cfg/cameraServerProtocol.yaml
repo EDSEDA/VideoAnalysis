@@ -1,0 +1,27 @@
+openapi: '3.0.3'
+info:
+  version: '1.0.0'
+  title: Базовые модели для запросов
+paths: { }
+
+components:
+  schemas:
+    #messages
+    CameraToServer:
+      description: Количество кадров с каждой из эмоций (отправляется раз в N сек)
+      type: object
+      properties:
+        workerId:
+          type: int
+        anger:
+          type: int
+        fear:
+          type: int
+        happy:
+          type: int
+        neutral:
+          type: int
+        sadness:
+          type: int
+        surprized:
+          type: int

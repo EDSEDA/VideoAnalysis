@@ -20,6 +20,11 @@ healthCheckToCdku = {
     "franchisee": [statistics]
 }
 
+exchanger_cdku2mediaserver = "cdku2mediaserver"
+queue_cdku2mediaserver = "cdku2mediaserver-q1"
+exchanger_mediaserver2cdku = "mediaserver2cdku"
+queue_mediaserver2cdku = "mediaserver2cdku-q1"
+
 class EmulGui(QWidget):
 
     def __init__(self):
@@ -110,11 +115,12 @@ class EmulGui(QWidget):
         self.show()
 
     def start(self):
+        self.btn_start.hide()
         self.connectionReceive = pika.BlockingConnection(pika.ConnectionParameters(host='localhost'))
         self.channelReceive = self.connectionReceive.channel()
         try:
-            self.channelReceive.exchange_declare('mediaserver2cdku', exchange_type='direct')
-            self.channelReceive.queue_declare(queue='mediaserver2cdku-q1')
+            self.channelReceive.exchange_declare(self.le_exchanger_in.text(), exchange_type='direct')
+            self.channelReceive.queue_declare(queue=self.le_queue_in.text())
         except Exception:
             print('mediaserver2cdku has already declared')
         recvThread = Thread(target=self.handleRegularMessage)
@@ -123,56 +129,29 @@ class EmulGui(QWidget):
         self.connectionSend = pika.BlockingConnection(pika.ConnectionParameters(host="localhost"))
         self.channelSend = self.connectionSend.channel()
         try:
-            self.channelSend.exchange_declare('cdku2mediaserver', exchange_type='direct')
-            self.channelSend.queue_declare(queue='cdku2mediaserver-q1')
+            self.channelSend.exchange_declare(self.le_exchanger_out.text(), exchange_type='direct')
+            self.channelSend.queue_declare(queue=self.le_queue_out.text())
         except Exception:
             print('cdku2mediaserver has already declared')
-        self.channelSend.queue_bind(queue='cdku2mediaserver-q1', exchange='cdku2mediaserver', routing_key='cdku2mediaserver-q1')
+        self.channelSend.queue_bind(queue=self.le_queue_out.text(), exchange=self.le_exchanger_out.text(), routing_key=self.le_queue_out.text())
         sendThread = Thread(target=self.sendRegularMessage)
         sendThread.start()
 
     def regularMessageCallback(self, ch, method, properties, body):
-
-        print("Received:\n" + str(json.loads(body)))
+        print("Received header:\n" + str(properties.headers['__TypeId__']))
+        print("Received body:\n" + str(json.loads(body)))
 
     def handleRegularMessage(self):
-        self.channelReceive.basic_consume(queue='mediaserver2cdku-q1', on_message_callback=self.regularMessageCallback, auto_ack=True)
+        self.channelReceive.basic_consume(queue=self.le_queue_in.text(), on_message_callback=self.regularMessageCallback, auto_ack=True)
         self.channelReceive.start_consuming()
-
-    def sendAudioSession(self):
-        audioSessionToMediaServer["armId"] = int(self.le1b1.text())
-        audioSessionToMediaServer["trainId"] = int(self.le2b1.text())
-        audioSessionToMediaServer["result"] = self.le3b1.text()
-        message = json.dumps(audioSessionToMediaServer)
-        props = pika.BasicProperties(headers={'__TypeId__': 'javaKostyl.AudioSessionToMediaServer'})
-        self.channelSend.basic_publish(exchange='cdku2mediaserver', routing_key='cdku2mediaserver-q1', body=message, properties=props)
-        # print("sendAudioSession")
-
-    def sendAnnounceSession(self):
-        announceSessionToMediaServer["armId"] = int(self.le1b2.text())
-        announceSessionToMediaServer["trainId"] = int(self.le2b2.text())
-        announceSessionToMediaServer["result"] = self.le3b2.text()
-        message = json.dumps(announceSessionToMediaServer)
-        props = pika.BasicProperties(headers={'__TypeId__': 'javaKostyl.AnnounceSessionToMediaServer'})
-        self.channelSend.basic_publish(exchange='cdku2mediaserver', routing_key='cdku2mediaserver-q1', body=message, properties=props)
-        # print("sendAnnounceSession")
-
-    def sendChangeOperator(self):
-        changeSessionOperatorToMediaServer["oldArmId"] = int(self.le1b3.text())
-        changeSessionOperatorToMediaServer["newArmId"] = int(self.le2b3.text())
-        changeSessionOperatorToMediaServer["trainId"] = int(self.le3b3.text())
-        message = json.dumps(changeSessionOperatorToMediaServer)
-        props = pika.BasicProperties(headers={'__TypeId__': 'javaKostyl.ChangeSessionOperatorToMediaServer'})
-        self.channelSend.basic_publish(exchange='cdku2mediaserver', routing_key='cdku2mediaserver-q1', body=message, properties=props)
-        # print("sendChangeOperator")
 
     def sendRegularMessage(self):
         while (True):
-            if (self.cb.isChecked()):
-                healthCheckToMediaServer["connectionState"] = self.le1cb.text()
+            if (self.checkBox.isChecked()):
+                healthCheckToMediaServer["connectionState"] = self.le_connection_state.text()
                 message = json.dumps(healthCheckToMediaServer)
                 props = pika.BasicProperties(headers= {'__TypeId__': 'javaKostyl.HealthCheckToMediaServer'})
-                self.channelSend.basic_publish(exchange='cdku2mediaserver', routing_key='cdku2mediaserver-q1', body=message, properties=props)
+                self.channelSend.basic_publish(exchange=self.le_exchanger_out.text(), routing_key=self.le_queue_out.text(), body=message, properties=props)
                 # print("Regular message sent:\n" + message)
             time.sleep(5)
 

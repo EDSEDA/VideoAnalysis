@@ -1,13 +1,13 @@
 from keras.models import load_model
-from tensorflow.keras.applications.vgg19 import preprocess_input
+# from tensorflow.keras.applications.vgg19 import preprocess_input
 import cv2
 import numpy as np
 import socket
 import time
 
 
-face_classifier = cv2.CascadeClassifier(r'haarcascade_frontalface_default.xml') # классический (не нейросетевой) детектор лица OpenCV
-classifier = load_model("model7.h5") # обученная модель для классификации эмоций
+face_classifier = cv2.CascadeClassifier(r'../cfg/faceDetector.xml') # детектор лица OpenCV
+classifier = load_model("../cfg/model.h5") # обученная модель для классификации эмоций
 
 emotion_labels = ['Anger', 'Fear', 'Happy', 'Neutral', 'Sadness', 'Surprized']
 
@@ -15,7 +15,7 @@ server = '127.0.0.1', 8181
 sock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
 sock.bind(('127.0.0.1', 8282))
 
-cap = cv2.VideoCapture("/dev/video1")
+cap = cv2.VideoCapture("/dev/video0")
 
 
 frame_rate = 10
