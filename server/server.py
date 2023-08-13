@@ -2,8 +2,8 @@ import socket
 from config import Settings, server_log
 
 
-NL = open("logs/NikitaStatistics.log", "w+")
-PL = open("logs/PetrStatistics.log", "w+")
+# NL = open("logs/NikitaStatistics.log", "w+")
+# PL = open("logs/PetrStatistics.log", "w+")
 
 clientNames = {8282: "Nikita", 8383: "Petr"}
 clients = dict.fromkeys(clientNames.keys())
