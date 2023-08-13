@@ -31,6 +31,7 @@ queueGuiToServer = "GuiToServer-q1"
 exchangerServerToGui = "ServerToGui"
 queueServerToGui = "ServerToGui-q1"
 
+
 class EmulGui(QWidget):
 
     def __init__(self):
