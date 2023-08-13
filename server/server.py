@@ -1,4 +1,6 @@
 import socket
+from config import Settings, server_log
+
 
 NL = open("logs/NikitaStatistics.log", "w+")
 PL = open("logs/PetrStatistics.log", "w+")
@@ -24,27 +26,33 @@ class Client:
         return emotionsPercentage  # тут надо бы еще слить с ключами мапы
 
 
-print('Start server')
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sock.bind(('127.0.0.1', 8181))
 
-while True:
-    data, ip = sock.recvfrom(1024)
-    address = ip[0]
-    port = int(ip[1])
-    emotion = data.decode('utf-8')
 
-    # print (emotion, "received from: ", clientNames[port])
+def server_run():
+    while True:
+        data, ip = sock.recvfrom(1024)
+        address = ip[0]
+        port = int(ip[1])
+        emotion = data.decode('utf-8')
 
-    if clients[port] == None:
-        clients[port] = Client(address, port)
+        # print (emotion, "received from: ", clientNames[port])
 
-    clients[port].updateEmotionStatistics(emotion)
+        if clients[port] == None:
+            clients[port] = Client(address, port)
 
-    if clientNames[port] == "Nikita":
-        NL.write("Nikita emotion statistics: " + str(clients[port].getEmotionStatistics()) + "\n")
-        NL.flush()
+        clients[port].updateEmotionStatistics(emotion)
 
-    if clientNames[port] == "Petr":
-        PL.write("Petr emotion statistics: " + str(clients[port].getEmotionStatistics()) + "\n")
-        PL.flush()
+        if clientNames[port] == "Nikita":
+            NL.write("Nikita emotion statistics: " + str(clients[port].getEmotionStatistics()) + "\n")
+            NL.flush()
+
+        if clientNames[port] == "Petr":
+            PL.write("Petr emotion statistics: " + str(clients[port].getEmotionStatistics()) + "\n")
+            PL.flush()
+
+
+if __name__ == '__main__':
+    server_log.info(f"Settings: {Settings().model_dump()}")
+    server_run()
