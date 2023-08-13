@@ -1,12 +1,13 @@
-import pika, sys, os
-from threading import Thread
-import time
 import json
+import time
+from threading import Thread
 
-from PyQt5.QtCore import Qt, QSize
-from PyQt5.QtWidgets import QWidget, QPushButton, QApplication, QLabel, QGridLayout, QLabel, QCheckBox
+import os
+import pika
+import sys
+from PyQt5.QtCore import QSize
 from PyQt5.QtGui import QPixmap
-
+from PyQt5.QtWidgets import QWidget, QApplication, QGridLayout, QLabel
 
 guiToServerRegular = {
     "userName": "Zloy Director"

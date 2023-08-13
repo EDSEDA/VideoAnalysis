@@ -19,7 +19,7 @@ comm==0.1.4
 contourpy==1.1.0
 cv==1.0.0
 cycler==0.11.0
-debugpy==1.6.8
+debugpy
 decorator==5.1.1
 defusedxml==0.7.1
 exceptiongroup==1.1.2
@@ -132,7 +132,7 @@ tensorboard==2.13.0
 tensorboard-data-server==0.7.1
 tensorflow==2.13.0
 tensorflow-estimator==2.13.0
-tensorflow-io-gcs-filesystem==0.33.0
+tensorflow-io-gcs-filesystem
 termcolor==2.3.0
 terminado==0.17.1
 text-unidecode==1.3
