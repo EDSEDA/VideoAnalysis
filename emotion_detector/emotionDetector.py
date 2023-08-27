@@ -5,6 +5,8 @@ import numpy as np
 import socket
 import time
 
+import api.rabbit
+
 face_classifier = cv2.CascadeClassifier(r'../cfg/faceDetector.xml')  # детектор лица OpenCV
 classifier = load_model("../cfg/model.h5")  # обученная модель для классификации эмоций
 
