@@ -14,8 +14,10 @@ channel.exchange_declare(exchange=exchanger_name, exchange_type='direct')
 channel.queue_declare(queue=queue_name)
 channel.queue_bind(queue=queue_name, exchange=exchanger_name, routing_key=routing_key)
 
+
 def mq_send(msg: str):
     channel.basic_publish(exchange=exchanger_name, routing_key=routing_key, body=msg.encode())
+
 
 def mq_recv(callback: callable):
     channel.basic_consume(queue=queue_name, on_message_callback=callback, auto_ack=True)
