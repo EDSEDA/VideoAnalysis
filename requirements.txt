@@ -154,3 +154,4 @@ Werkzeug==2.3.6
 widgetsnbextension==4.0.8
 wrapt==1.15.0
 pydantic
+SQLAlchemy==1.4.41
