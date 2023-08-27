@@ -4,9 +4,7 @@
 
 1) build & start docker-compose 
 
-``docker-compose build``
-
-``docker-compose start``
+``docker-compose up``
 
 2) make db migration
 
