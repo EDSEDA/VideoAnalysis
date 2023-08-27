@@ -1,2 +1,4 @@
 .idea/
-cfg/model.h5
+learning/data
+*cache*
+*tmp*
