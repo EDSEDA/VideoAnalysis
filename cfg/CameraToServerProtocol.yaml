@@ -1,0 +1,33 @@
+openapi: '3.0.3'
+info:
+  version: '1.0.0'
+  title: Базовые модели для запросов
+paths: { }
+
+components:
+  schemas:
+    GeneralStatistics:
+      description: Статистика по каждому консультанту
+      type: object
+      properties:
+        consultants:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkerStatistics"
+    WorkerStatistics:
+      type: object
+      properties:
+        workerId:
+          type: integer
+        anger:
+          type: integer
+        fear:
+          type: integer
+        happy:
+          type: integer
+        neutral:
+          type: integer
+        sadness:
+          type: integer
+        surprized:
+          type: integer
