@@ -1,34 +1,22 @@
 import pika
-from enum import Enum
 
 from api.config import Settings
 
-
-class QueueName(Enum):
-    test = 'test'
-    another = 'another'
-
+exchanger_name = 'camera_to_server'
+queue_name = 'camera_to_server'
+routing_key = queue_name
 
 credentials = pika.PlainCredentials(username=Settings.RM_USER, password=Settings.RM_PASSWORD)
-connection = pika.BlockingConnection(pika.ConnectionParameters(host=Settings.RM_HOST, port=Settings.RM_PORT,
-                                                               credentials=credentials))
+connection = pika.BlockingConnection(
+    pika.ConnectionParameters(host=Settings.RM_HOST, port=Settings.RM_PORT, credentials=credentials))
+channel = connection.channel()
+channel.exchange_declare(exchange=exchanger_name, exchange_type='direct')
+channel.queue_declare(queue=queue_name)
+channel.queue_bind(queue=queue_name, exchange=exchanger_name, routing_key=routing_key)
 
-test_channel = connection.channel()
-test_channel.queue_declare(queue='test')
+def mq_send(msg: str):
+    channel.basic_publish(exchange=exchanger_name, routing_key=routing_key, body=msg.encode())
 
-another_channel = connection.channel()
-another_channel.queue_declare(queue='another')
-
-queue = dict(
-    test=test_channel,
-    another=another_channel
-)
-
-routing_key = 'test_key'
-
-
-def mq_send(msg: str, queue_name: QueueName):
-    queue[queue_name].basic_publish(exchange='', routing_key=routing_key, body=msg.encode())
-
-
-# connection.close()
+def mq_recv(callback: callable):
+    channel.basic_consume(queue=queue_name, on_message_callback=callback, auto_ack=True)
+    channel.start_consuming()
