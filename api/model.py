@@ -24,7 +24,7 @@ class ConfigMixin:
     __table_args__ = {'schema': WORK_SCHEMA}
 
 
-class User(Base, ConfigMixin):
+class User(Base, WithID, ConfigMixin):
     __tablename__ = "user"
     __table_args__ = {**ConfigMixin.__table_args__, **{'comment': 'User of system'}}
     name = Column(String(), comment='Name')
@@ -32,7 +32,7 @@ class User(Base, ConfigMixin):
     role = Column(Boolean(), comment='Users role')
 
 
-class Emotion(Base, ConfigMixin):
+class Emotion(Base, WithID, ConfigMixin):
     __tablename__ = "emotion"
     __table_args__ = {**ConfigMixin.__table_args__, **{'comment': 'Emotions metrics'}}
     user_id = Column(Integer(), ForeignKey(User.id, ondelete='CASCADE'), nullable=False, comment='Сборщик эмоций')

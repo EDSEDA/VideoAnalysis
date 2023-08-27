@@ -155,3 +155,5 @@ widgetsnbextension==4.0.8
 wrapt==1.15.0
 pydantic
 SQLAlchemy==1.4.41
+alembic==1.11.3
+psycopg2==2.9.7
