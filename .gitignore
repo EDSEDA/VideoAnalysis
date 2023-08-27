@@ -2,3 +2,4 @@
 learning/data
 *cache*
 *tmp*
+/.env
