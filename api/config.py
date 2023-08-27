@@ -8,8 +8,8 @@ logging.basicConfig(level=logging.INFO)
 class Settings(BaseModel):
     RM_HOST: str = 'localhost'
     RM_PORT: int = 5672
-    RM_USER: str = 'rmuser'
-    RM_PASSWORD: str = 'rmpassword'
+    RM_USER: str = 'guest'
+    RM_PASSWORD: str = 'guest'
 
     DB_HOST: str = 'localhost'
     DB_PORT: int = 5434
@@ -30,3 +30,12 @@ ASYNC_DB_URL = f'postgresql+asyncpg://{DB_URL}'
 SYNC_DB_URL = f'postgresql://{DB_URL}'
 
 WORK_SCHEMA = 'test_name'
+
+EMOTION_LABELS = ['Anger', 'Fear', 'Happy', 'Neutral', 'Sadness', 'Surprized']
+
+class Paths(BaseModel):
+    FACE_CLASSIFIER_PATH: str = "../cfg/face_detector.xml"
+    PREDICTION_MODEL_PATH: str = "../learning/data/model.h5"
+    CONFIG_PATH: str = "../cfg/emotion_detector.cfg"
+
+paths = Paths()

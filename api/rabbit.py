@@ -1,14 +1,14 @@
 import pika
 
-from api.config import Settings
+from api.config import settings
 
 exchanger_name = 'camera_to_server'
 queue_name = 'camera_to_server'
 routing_key = queue_name
 
-credentials = pika.PlainCredentials(username=Settings.RM_USER, password=Settings.RM_PASSWORD)
+credentials = pika.PlainCredentials(username=settings.RM_USER, password=settings.RM_PASSWORD)
 connection = pika.BlockingConnection(
-    pika.ConnectionParameters(host=Settings.RM_HOST, port=Settings.RM_PORT, credentials=credentials))
+    pika.ConnectionParameters(host=settings.RM_HOST, port=settings.RM_PORT, credentials=credentials))
 channel = connection.channel()
 channel.exchange_declare(exchange=exchanger_name, exchange_type='direct')
 channel.queue_declare(queue=queue_name)
