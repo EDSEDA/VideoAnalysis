@@ -1,12 +1,9 @@
 from sqlalchemy import (Column, DateTime,
                         Integer, String, Boolean, ForeignKey, Date, JSON, UniqueConstraint, Enum, Numeric,
                         BigInteger, Computed)
-from sqlalchemy import Index
-from sqlalchemy.dialects.postgresql import ARRAY
+
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship, declared_attr
 from sqlalchemy.sql import func
-from typing import Dict
 
 from api.config import WORK_SCHEMA
 
@@ -38,12 +35,11 @@ class User(Base, ConfigMixin):
 class Emotion(Base, ConfigMixin):
     __tablename__ = "emotion"
     __table_args__ = {**ConfigMixin.__table_args__, **{'comment': 'Emotions metrics'}}
-    user_id = Column(Integer())
-    datetime = Column(String())
-
-    # emotion1
-    # emotion2
-    # emotion3
-    # emotion4
-    # emotion5
-    # datetime
+    user_id = Column(Integer(), ForeignKey(User.id, ondelete='CASCADE'), nullable=False, comment='Сборщик эмоций')
+    anger = Column(Integer())
+    fear = Column(Integer())
+    happy = Column(Integer())
+    neutral = Column(Integer())
+    sadness = Column(Integer())
+    surprized = Column(Integer())
+    datetime = Column(DateTime())
