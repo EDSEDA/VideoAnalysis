@@ -6,18 +6,13 @@ paths: { }
 
 components:
   schemas:
-    GeneralStatistics:
-      description: Статистика по каждому консультанту
-      type: object
-      properties:
-        consultants:
-          type: array
-          items:
-            $ref: "#/components/schemas/WorkerStatistics"
     WorkerStatistics:
+      description: Кол-во кадров с детекцией каждой эмоцции
       type: object
       properties:
-        workerId:
+        worker_id:
+          type: integer
+        timestammp:
           type: integer
         anger:
           type: integer

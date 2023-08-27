@@ -31,7 +31,7 @@ SYNC_DB_URL = f'postgresql://{DB_URL}'
 
 WORK_SCHEMA = 'test_name'
 
-EMOTION_LABELS = ['Anger', 'Fear', 'Happy', 'Neutral', 'Sadness', 'Surprized']
+EMOTION_LABELS = ['anger', 'fear', 'happy', 'neutral', 'sadness', 'surprized']
 
 class Paths(BaseModel):
     FACE_CLASSIFIER_PATH: str = "../cfg/face_detector.xml"

@@ -19,6 +19,6 @@ def mq_send(msg: str):
     channel.basic_publish(exchange=exchanger_name, routing_key=routing_key, body=msg.encode())
 
 
-def mq_recv(callback: callable):
+def mq_recv(callback: callable): # формат колбэк функции: callback(ch, method, properties, body):
     channel.basic_consume(queue=queue_name, on_message_callback=callback, auto_ack=True)
     channel.start_consuming()

@@ -1,13 +1,7 @@
-# EDA (emotion decetion?)
+# EDA (emotion decetion app)
 
-## Quiq start
-
-1) build & start docker-compose 
-
-``docker-compose up``
-
-2) make db migration
-
-``alembic upgrade head``
-
-3) 
+**README по каждому сервису:**
+* emotion detector: [**README.md**](./emotion_detector/README.md)
+* gui: [**README**](./gui/README.md)
+* learning: [**README**](./learning/README.md)
+* server: [**README**](./server/README.md)
