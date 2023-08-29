@@ -1,27 +1,16 @@
-from datetime import datetime
 
-from keras.models import load_model
 import cv2
 import numpy as np
 import time
 import json
-import configparser
-from threading import Thread, Lock
+import yaml
 
+from keras.models import load_model
+from datetime import datetime
+from threading import Thread, Lock
 from api.rabbit import mq_send
 from api.config import EMOTION_LABELS, paths
 
-face_classifier = cv2.CascadeClassifier(paths.FACE_CLASSIFIER_PATH)  # детектор лица OpenCV
-classifier = load_model(paths.PREDICTION_MODEL_PATH)  # обученная модель для классификации эмоций
-
-config = configparser.ConfigParser()
-config.read(paths.CONFIG_PATH)
-video_driver_path = config['DEFAULT']['video_driver_path']
-send_period_ms = int(config['DEFAULT']['send_period_ms'])
-worker_id = int(config['DEFAULT']['worker_id'])
-
-print(video_driver_path)
-cap = cv2.VideoCapture(video_driver_path)
 
 FRAME_RATE = 10
 FACE_CLASSIFIER_MIN_NEIGHBORS=10
@@ -29,10 +18,9 @@ FACE_CLASSIFIER_MIN_SIZE=(40, 40)
 
 mutex = Lock()
 
-emotions_buffer = dict.fromkeys(EMOTION_LABELS, 0)
-emotions_buffer["worker_id"] = worker_id
-
-def try_detect_frame():
+def try_detect_frame(worker_id: int, video_driver_path: str):
+    cap = cv2.VideoCapture(video_driver_path)
+    workers[worker_id] = dict.fromkeys(EMOTION_LABELS, 0) # для каждого айдишника в словаре задаем словарь эмоций
     prev = 0
     while True:
 
@@ -63,7 +51,7 @@ def try_detect_frame():
                 prediction = classifier.predict(roi)
                 emotion_label = EMOTION_LABELS[np.argmax(prediction)]
                 with mutex:
-                    emotions_buffer[emotion_label] += 1
+                    workers[worker_id][emotion_label] += 1
 
                 # prediction drawing
                 label_position = (x, y)
@@ -75,16 +63,30 @@ def try_detect_frame():
 
 def send_buffer():
     while True:
-        time.sleep(send_period_ms)
-        emotions_buffer["date"] = int(datetime.now().timestamp())
+        time.sleep(send_period_s)
+        workers["date"] = int(datetime.now().timestamp())
         with mutex:
-            mq_send(json.dumps(emotions_buffer))
-            for key in EMOTION_LABELS:
-                emotions_buffer[key]= 0
+            mq_send(json.dumps(workers))
+            for value in workers.values():
+                for key in EMOTION_LABELS:
+                    value[key] = 0
 
-sendThread = Thread(target=send_buffer)
-sendThread.start()
+face_classifier = cv2.CascadeClassifier(paths.FACE_CLASSIFIER_PATH)  # детектор лица OpenCV
+classifier = load_model(paths.PREDICTION_MODEL_PATH)  # обученная модель для классификации эмоций
 
-try_detect_frame()
-cap.release()
+with open(paths.CONFIG_PATH, "r") as stream:
+    try:
+        config = yaml.safe_load(stream)
+    except yaml.YAMLError as exc:
+        print(exc)
+
+workers = dict()
+
+send_period_s = int(config['send_period_s'])
+for worker in config['workers']:
+    worker_id = int(worker['id'])
+    video_driver_path = worker['video_driver_path']
+    Thread(target=try_detect_frame, kwargs={'worker_id': worker_id, 'video_driver_path': video_driver_path}).start()
+
+send_buffer()
 cv2.destroyAllWindows()

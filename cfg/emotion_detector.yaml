@@ -1,0 +1,4 @@
+send_period_s: 10
+workers:
+  - { id: 17, video_driver_path: "/dev/video0" }
+#  - { id: 18, video_driver_path: "/dev/video1" }

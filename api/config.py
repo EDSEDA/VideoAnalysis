@@ -36,6 +36,6 @@ EMOTION_LABELS = ['anger', 'fear', 'happy', 'neutral', 'sadness', 'surprized']
 class Paths(BaseModel):
     FACE_CLASSIFIER_PATH: str = "../cfg/face_detector.xml"
     PREDICTION_MODEL_PATH: str = "../learning/data/model.h5"
-    CONFIG_PATH: str = "../cfg/emotion_detector.cfg"
+    CONFIG_PATH: str = "../cfg/emotion_detector.yaml"
 
 paths = Paths()
