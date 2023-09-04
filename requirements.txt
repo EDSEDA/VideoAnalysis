@@ -153,7 +153,11 @@ websocket-client==1.6.1
 Werkzeug==2.3.6
 widgetsnbextension==4.0.8
 wrapt==1.15.0
-pydantic
+pydantic~=2.1.1
 SQLAlchemy==1.4.41
 alembic==1.11.3
 psycopg2==2.9.7
+
+uvicorn~=0.23.2
+fastapi~=0.103.1
+starlette~=0.27.0

@@ -1,5 +1,11 @@
 import socket
 from config import Settings, server_log
+import logging
+import uvicorn
+from fastapi import FastAPI
+from fastapi import Request
+from fastapi.middleware.cors import CORSMiddleware
+from starlette.responses import RedirectResponse
 
 
 # NL = open("logs/NikitaStatistics.log", "w+")

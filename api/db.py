@@ -1,14 +1,7 @@
-import asyncio
-import csv
-import logging
-import sqlite3
 import subprocess
-from operator import and_
-from sqlalchemy import create_engine, select, or_, func
-from sqlalchemy import text
-from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy import create_engine
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.orm import sessionmaker, joinedload, selectinload
+from sqlalchemy.orm import sessionmaker
 
 
 from api.config import settings, ASYNC_DB_URL, SYNC_DB_URL
