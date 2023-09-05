@@ -1,7 +1,6 @@
 from pydantic import BaseModel
 import logging
 
-
 logging.basicConfig(level=logging.INFO)
 
 
@@ -33,9 +32,11 @@ WORK_SCHEMA = 'test_name'
 
 EMOTION_LABELS = ['anger', 'fear', 'happy', 'neutral', 'sadness', 'surprized']
 
+
 class Paths(BaseModel):
     FACE_CLASSIFIER_PATH: str = "../cfg/face_detector.xml"
     PREDICTION_MODEL_PATH: str = "../learning/data/model.h5"
     CONFIG_PATH: str = "../cfg/emotion_detector.yaml"
+
 
 paths = Paths()

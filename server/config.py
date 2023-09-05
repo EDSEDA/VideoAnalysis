@@ -8,3 +8,6 @@ server_log = logging.getLogger(name="server logger")
 class Settings(BaseSettings):
     APP_HOST: str = '127.0.0.1'
     APP_PORT: int = 8181
+
+
+settings = Settings()
