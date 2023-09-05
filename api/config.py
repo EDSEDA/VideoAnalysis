@@ -40,3 +40,4 @@ class Paths(BaseModel):
 
 
 paths = Paths()
+API_PREFIX = '/api'
