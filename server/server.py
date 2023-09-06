@@ -22,7 +22,7 @@ async def shutdown():
     pass
 
 
-create_routes(app, [emotions])
+create_routes(app, emotions)
 
 
 def run():
