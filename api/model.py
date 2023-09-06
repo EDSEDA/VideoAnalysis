@@ -31,6 +31,12 @@ class User(Base, WithID, ConfigMixin):
     role = Column(Boolean(), comment='Users role')
 
 
+class Shop(Base, WithID, ConfigMixin):
+    __tablename__ = "shop"
+    __table_args__ = {**ConfigMixin.__table_args__, **{'comment': 'Shop info'}}
+    name = Column(String(), comment='Name')
+
+
 class Emotion(Base, WithID, ConfigMixin):
     __tablename__ = "emotion"
     __table_args__ = {**ConfigMixin.__table_args__, **{'comment': 'Emotions metrics'}}
@@ -42,3 +48,5 @@ class Emotion(Base, WithID, ConfigMixin):
     sadness = Column(Integer())
     surprized = Column(Integer())
     datetime = Column(DateTime())
+    placement_point = Column(Integer(), ForeignKey(Shop.id, ondelete='CASCADE'), nullable=False,
+                             comment='Место сбора данных')
