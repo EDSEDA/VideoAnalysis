@@ -5,3 +5,8 @@
 * gui: [**README**](./gui/README.md)
 * learning: [**README**](./learning/README.md)
 * server: [**README**](./server/README.md)
+
+
+
+# Start
+For start RESTApi server: ```run app.py```
