@@ -67,9 +67,9 @@ def send_buffer():
         workers["date"] = int(datetime.now().timestamp())
         with mutex:
             mq_send(json.dumps(workers))
-            for value in workers.values():
-                for key in EMOTION_LABELS:
-                    value[key] = 0
+            # for value in workers.values():
+            #     for key in EMOTION_LABELS:
+                    # value[key] = 0
 
 
 face_classifier = cv2.CascadeClassifier(paths.FACE_CLASSIFIER_PATH)  # детектор лица OpenCV
