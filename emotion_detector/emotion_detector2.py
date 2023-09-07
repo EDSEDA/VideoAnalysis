@@ -1,4 +1,3 @@
-
 import cv2
 import numpy as np
 import time
@@ -21,7 +20,7 @@ from ultralytics import YOLO
 from omegaconf import OmegaConf
 from pathlib import Path
 
-FRAME_RATE = 10
+REAL_FPS=2
 FACE_CLASSIFIER_MIN_NEIGHBORS=12
 FACE_CLASSIFIER_MIN_SIZE=(56, 56)
 
@@ -68,120 +67,121 @@ def try_detect_frame(worker_id: int, video_driver_path: str, cap: any, client_nu
 
     detected_track_id = -1
 
+    kostyl = 0
     while (True):
-        time_elapsed = time.time() - prev
         is_frame, image_full = cap.read()
 
-        if time_elapsed > 1. / FRAME_RATE:
+        if int(cap.get(cv2.CAP_PROP_FPS)/REAL_FPS) != kostyl: # программа захватит все кадры и будет тормозить, необходимо отбросить большую часть
+            kostyl += 1
+            continue
+        kostyl = 1
+        print("process time:" + str(time.time() - prev))
 
-            if is_frame == False:
-                print("no frame")
+        if is_frame == False:
+            print("no frame")
+            continue
+
+        prev = time.time()
+        print(image_full.shape)
+        image_full = image_full[int(image_full.shape[0]/4) : int(3*image_full.shape[0]/4), int(image_full.shape[1]/4) : int(3*image_full.shape[1]/4)]
+
+        # PERSON DETECTION
+        results = modelYolo.track(image_full, persist=True)
+        annotated_frame = results[0].plot()
+
+        if results[0].boxes.id == None:  # если объект появлялся на камере и при этом пропал из списка обнаруженных
+            cv2.imshow("YOLOv8 Tracking", annotated_frame)
+            continue
+
+        if detected_track_id == -1:
+            person_inds = [i for i, j in enumerate(results[0].boxes.cls.int().tolist()) if j == 0]  # получаем айдишники для объектов == человек в векторе айдишников
+            if len(person_inds) == 0: # нормально, если первым кадром нейронка спутала человека с котом
+                cv2.imshow("YOLOv8 Tracking", annotated_frame)
                 continue
 
-            prev = time.time()
+            person_ind = person_inds[0]  # пусть детектим первого попавшегося
+            detected_track_id = results[0].boxes.id.int().tolist()[person_ind]  # достаем айдишник объекта и сохраняем его
+            session_start_time = time.time()
 
-            # PERSON DETECTION
-            results = modelYolo.track(image_full, persist=True)
-            annotated_frame = results[0].plot()
-
-            # if results[0].boxes.id == None and detected_track_id == -1:  # если объект никогда не появлялся на камере
-            #     cv2.imshow("YOLOv8 Tracking", annotated_frame)
-            #     continue
-            #
-            if results[0].boxes.id == None:  # если объект появлялся на камере и при этом пропал из списка обнаруженных
-                continue
-
-            if detected_track_id == -1:
-                person_inds = [i for i, j in enumerate(results[0].boxes.cls.int().tolist()) if j == 0]  # получаем айдишники для объектов == человек в векторе айдишников
-                if len(person_inds) == 0: # нормально, если первым кадром нейронка спутала человека с котом
-                    cv2.imshow("YOLOv8 Tracking", annotated_frame)
-                    continue
-
-                person_ind = person_inds[0]  # пусть детектим первого попавшегося
-                detected_track_id = results[0].boxes.id.int().tolist()[person_ind]  # достаем айдишник объекта и сохраняем его
-                session_start_time = time.time()
-
-            is_required_id_exist = False
-            for person_ind, id in enumerate(results[0].boxes.id.int().tolist()):
-                if detected_track_id == id:
-                    is_required_id_exist = True
-                    break
-
-            if is_required_id_exist == False:
-                print("no is_required_id_exist")
-                print(results[0].boxes.id.int().tolist())
-                print(detected_track_id)
+        is_required_id_exist = False
+        for person_ind, id in enumerate(results[0].boxes.id.int().tolist()):
+            if detected_track_id == id:
+                is_required_id_exist = True
                 break
 
-            xyxy = results[0].boxes.xyxy[person_ind].int().tolist()
-            image_person = image_full[xyxy[1]:xyxy[3], xyxy[0]:xyxy[2]]
+        if is_required_id_exist == False:
+            print("no is_required_id_exist")
+            print(results[0].boxes.id.int().tolist())
+            print(detected_track_id)
+            break
 
-            label_person = "service time: {} sec, client number: {}".format(int(time.time() - session_start_time), client_number)
-            draw_label(annotated_frame, (0, annotated_frame.shape[0]-10), label_person)
+        xyxy = results[0].boxes.xyxy[person_ind].int().tolist()
+        image_person = image_full[xyxy[1]:xyxy[3], xyxy[0]:xyxy[2]]
+
+        # HEAD DETECTION
+        detected = detector(image_person, 1)
+        faces = np.empty((1, img_size, img_size, 3))
+        img_h, img_w, _ = np.shape(image_person)
+        if len(detected) == 0:
             cv2.imshow("YOLOv8 Tracking", annotated_frame)
+            continue
 
-            # HEAD DETECTION
-            detected = detector(image_person, 1)
-            faces = np.empty((1, img_size, img_size, 3))
-            img_h, img_w, _ = np.shape(image_person)
-            if len(detected) == 0:
-                continue
+        x1, y1, x2, y2, w, h = detected[0].left(), detected[0].top(), detected[0].right() + 1, detected[0].bottom() + 1, detected[0].width(), detected[0].height()
+        xw1 = max(int(x1 - 0.3 * w), 0)
+        yw1 = max(int(y1 - 0.3 * h), 0)
+        xw2 = min(int(x2 + 0.3 * w), img_w - 1)
+        yw2 = min(int(y2 + 0.3 * h), img_h - 1)
+        image_head = image_person[yw1:yw2 + 1, xw1:xw2 + 1]
+        faces[0] = cv2.resize(image_head, (img_size, img_size))
 
-            x1, y1, x2, y2, w, h = detected[0].left(), detected[0].top(), detected[0].right() + 1, detected[
-                0].bottom() + 1, detected[0].width(), detected[0].height()
-            xw1 = max(int(x1 - 0.4 * w), 0)
-            yw1 = max(int(y1 - 0.4 * h), 0)
-            xw2 = min(int(x2 + 0.4 * w), img_w - 1)
-            yw2 = min(int(y2 + 0.4 * h), img_h - 1)
-            image_head = image_person[yw1:yw2 + 1, xw1:xw2 + 1]
-            faces[0] = cv2.resize(image_head, (img_size, img_size))
+        # predict ages and sexs of the detected faces
+        results = model.predict(faces)
+        predicted_sexs = results[0]
+        ages = np.arange(0, 101).reshape(101, 1)
+        predicted_ages = results[1].dot(ages).flatten()
 
-            # predict ages and sexs of the detected faces
-            results = model.predict(faces)
-            predicted_sexs = results[0]
-            ages = np.arange(0, 101).reshape(101, 1)
-            predicted_ages = results[1].dot(ages).flatten()
+        # draw results
+        predicted_age = predicted_ages[0]
+        predicted_sex = predicted_sexs[0][0]
+        age_avg = (age_avg * age_count + predicted_age) / (sex_count + 1)
+        sex_avg = (sex_avg * sex_count + predicted_sex) / (sex_count + 1)
+        age_count += 1
+        sex_count += 1
 
-            # draw results
-            predicted_age = predicted_ages[0]
-            predicted_sex = predicted_sexs[0][0]
-            age_avg = (age_avg * age_count + predicted_age) / (sex_count + 1)
-            sex_avg = (sex_avg * sex_count + predicted_sex) / (sex_count + 1)
-            age_count += 1
-            sex_count += 1
+        # FACE DETECTION
+        image_face = cv2.cvtColor(image_head, cv2.COLOR_BGR2GRAY)
+        image_face = cv2.cvtColor(image_face, cv2.COLOR_GRAY2RGB)
+        faces = face_classifier.detectMultiScale(image_face, minNeighbors=FACE_CLASSIFIER_MIN_NEIGHBORS, minSize=FACE_CLASSIFIER_MIN_SIZE)
 
-            label_head = "ages: {}, sex: {}".format(int(age_avg), "Male" if sex_avg < 0.5 else "Female")
-            draw_label(image_head, (0, yw2-yw1-10), label_head)
-            cv2.imshow('age_sex_detection', image_head)
+        if len(faces) == 0:
+            cv2.imshow("YOLOv8 Tracking", annotated_frame)
+            continue
 
-            # faces searching
-            image_face = cv2.cvtColor(image_head, cv2.COLOR_BGR2GRAY)
-            image_face = cv2.cvtColor(image_face, cv2.COLOR_GRAY2RGB)
-            faces = face_classifier.detectMultiScale(image_face, minNeighbors=FACE_CLASSIFIER_MIN_NEIGHBORS, minSize=FACE_CLASSIFIER_MIN_SIZE)
+        x, y, w, h = faces[0]
 
-            if len(faces) == 0:
-                continue
+        # face cutting
+        image_face = image_face[y:y + h, x:x + w]
 
-            x, y, w, h = faces[0]
+        # some image processing and kostyls
+        image_face_resized = cv2.resize(image_face, (48, 48), interpolation=cv2.INTER_AREA)
+        roi = np.empty((1, 48, 48, 3))
+        roi[0] = image_face_resized
+        roi = roi / 255
 
-            # face cutting
-            image_face = image_face[y:y + h, x:x + w]
+        #prediction making
+        prediction = classifier.predict(roi)
+        emotion_label = EMOTION_LABELS[np.argmax(prediction)]
+        worker[emotion_label] += 1
 
-            # some image processing and kostyls
-            image_face_resized = cv2.resize(image_face, (48, 48), interpolation=cv2.INTER_AREA)
-            roi = np.empty((1, 48, 48, 3))
-            roi[0] = image_face_resized
-            roi = roi / 255
+        label_person = "service time: {} sec, client number: {}".format(int(time.time() - session_start_time), client_number)
+        draw_label(annotated_frame, (0, annotated_frame.shape[0]-10), label_person)
 
-            #prediction making
-            prediction = classifier.predict(roi)
-            emotion_label = EMOTION_LABELS[np.argmax(prediction)]
-            worker[emotion_label] += 1
+        label_head = "ages: {}, sex: {}".format(int(age_avg), "Male" if sex_avg < 0.5 else "Female")
+        draw_label(annotated_frame, (0, annotated_frame.shape[0]-30), label_head)
 
-            # prediction drawing
-            label_position = (x, y)
-            cv2.putText(image_face, emotion_label, label_position, cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 3)
-            cv2.imshow('Emotion Detector', image_face)
+        draw_label(annotated_frame, (0, annotated_frame.shape[0]-50), emotion_label)
+
+        cv2.imshow("YOLOv8 Tracking", annotated_frame)
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
@@ -214,6 +214,7 @@ worker = config['workers'][0]
 worker_id = int(worker['id'])
 video_driver_path = worker['video_driver_path']
 cap = cv2.VideoCapture(video_driver_path)
+
 try_detect_frame(worker_id, video_driver_path, cap, 1)
 
 print("end")
