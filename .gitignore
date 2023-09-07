@@ -1,5 +1,7 @@
 .idea/
-learning/data*
+learning/data/
+learning/data2/
 *cache*
 *tmp*
 /.env
+data/
