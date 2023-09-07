@@ -1,8 +1,12 @@
 from fastapi import APIRouter, Depends
-
 from typing import List, Union
+
+from sqlalchemy import select, insert, delete, text
+
 from api.utils import module_url
+from api.context import session
 from server.schema import UserEmotions
+from api.model import User, Emotion, Shop
 
 
 r = APIRouter()
@@ -16,5 +20,6 @@ async def get_emotions():
     """
     Вернуть все значения эмоций всех пользователей
     """
-
+    r = (await session().execute(select(Emotion))).fetchall()
+    print(r)
     return ...

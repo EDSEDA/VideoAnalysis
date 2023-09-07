@@ -3,7 +3,6 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
-
 from api.config import settings, ASYNC_DB_URL, SYNC_DB_URL
 
 
@@ -15,7 +14,3 @@ sync_engine = create_engine(SYNC_DB_URL, echo=settings.DB_ECHO, pool_pre_ping=Tr
 def migrate():
     if subprocess.run(["alembic", "upgrade", 'head']).returncode > 0:
         raise Exception(f'DB migration failed')
-
-
-        # async with async_session() as session:
-        #     set_session(session)

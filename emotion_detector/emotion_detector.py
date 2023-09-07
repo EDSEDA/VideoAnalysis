@@ -1,4 +1,3 @@
-
 import cv2
 import numpy as np
 import time
@@ -11,16 +10,16 @@ from threading import Thread, Lock
 from api.rabbit import mq_send
 from api.config import EMOTION_LABELS, paths
 
-
 FRAME_RATE = 10
-FACE_CLASSIFIER_MIN_NEIGHBORS=10
-FACE_CLASSIFIER_MIN_SIZE=(40, 40)
+FACE_CLASSIFIER_MIN_NEIGHBORS = 10
+FACE_CLASSIFIER_MIN_SIZE = (40, 40)
 
 mutex = Lock()
 
+
 def try_detect_frame(worker_id: int, video_driver_path: str):
     cap = cv2.VideoCapture(video_driver_path)
-    workers[worker_id] = dict.fromkeys(EMOTION_LABELS, 0) # для каждого айдишника в словаре задаем словарь эмоций
+    workers[worker_id] = dict.fromkeys(EMOTION_LABELS, 0)  # для каждого айдишника в словаре задаем словарь эмоций
     prev = 0
     while True:
 
@@ -33,10 +32,10 @@ def try_detect_frame(worker_id: int, video_driver_path: str):
             # faces searching
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
-            faces = face_classifier.detectMultiScale(frame, minNeighbors=FACE_CLASSIFIER_MIN_NEIGHBORS, minSize=FACE_CLASSIFIER_MIN_SIZE)
+            faces = face_classifier.detectMultiScale(frame, minNeighbors=FACE_CLASSIFIER_MIN_NEIGHBORS,
+                                                     minSize=FACE_CLASSIFIER_MIN_SIZE)
 
             for (x, y, w, h) in faces:
-
                 # face cutting
                 cv2.rectangle(frame, (x - 2, y - 2), (x + w + 4, y + h + 4), (0, 255, 255), 2)
                 roi_box = frame[y:y + h, x:x + w]
@@ -47,7 +46,7 @@ def try_detect_frame(worker_id: int, video_driver_path: str):
                 roi[0] = roi_box
                 roi = roi / 255
 
-                #prediction making
+                # prediction making
                 prediction = classifier.predict(roi)
                 emotion_label = EMOTION_LABELS[np.argmax(prediction)]
                 with mutex:
@@ -61,6 +60,7 @@ def try_detect_frame(worker_id: int, video_driver_path: str):
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
 
+
 def send_buffer():
     while True:
         time.sleep(send_period_s)
@@ -70,6 +70,7 @@ def send_buffer():
             for value in workers.values():
                 for key in EMOTION_LABELS:
                     value[key] = 0
+
 
 face_classifier = cv2.CascadeClassifier(paths.FACE_CLASSIFIER_PATH)  # детектор лица OpenCV
 classifier = load_model(paths.PREDICTION_MODEL_PATH)  # обученная модель для классификации эмоций
