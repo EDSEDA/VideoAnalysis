@@ -31,7 +31,8 @@ class Message(BaseModel):
 
 
 async def save_message_to_database(message_body: str):
-    print('message saved')
+    if message_body:
+        logging.info(f'message received: {message_body}')
 
 
 async def consume_messages():
