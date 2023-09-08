@@ -11,6 +11,25 @@ from threading import Thread, Lock
 from api.rabbit import mq_send
 from api.config import EMOTION_LABELS, paths
 
+# Standard python libraries
+import os
+import time
+import requests
+
+# Essential DS libraries
+import numpy as np
+import pandas as pd
+from sklearn.metrics import roc_auc_score
+from sklearn.model_selection import train_test_split
+import torch
+
+# LightAutoML presets, task and report generation
+from lightautoml.automl.presets.tabular_presets import TabularAutoML
+from lightautoml.automl.presets.tabular_presets import TabularUtilizedAutoML
+from lightautoml.tasks import Task
+
+import joblib
+
 
 FRAME_RATE = 10
 FACE_CLASSIFIER_MIN_NEIGHBORS=10

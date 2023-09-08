@@ -6,7 +6,6 @@ import yaml
 import dlib
 
 from tensorflow.keras import applications
-from tensorflow.keras.optimizers import SGD, Adam
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Dense
 
@@ -20,7 +19,7 @@ from ultralytics import YOLO
 from omegaconf import OmegaConf
 from pathlib import Path
 
-REAL_FPS=2
+REAL_FPS=5
 FACE_CLASSIFIER_MIN_NEIGHBORS=12
 FACE_CLASSIFIER_MIN_SIZE=(56, 56)
 
@@ -71,32 +70,31 @@ def try_detect_frame(worker_id: int, video_driver_path: str, cap: any, client_nu
     while (True):
         is_frame, image_full = cap.read()
 
-        if int(cap.get(cv2.CAP_PROP_FPS)/REAL_FPS) != kostyl: # программа захватит все кадры и будет тормозить, необходимо отбросить большую часть
-            kostyl += 1
-            continue
-        kostyl = 1
-        print("process time:" + str(time.time() - prev))
+        # if int(cap.get(cv2.CAP_PROP_FPS)/REAL_FPS) != kostyl: # программа захватит все кадры и будет тормозить, необходимо отбросить большую часть
+        #     kostyl += 1
+        #     continue
+        # kostyl = 1
+        # print("process time:" + str(time.time() - prev))
+        prev = time.time()
 
         if is_frame == False:
             print("no frame")
             continue
 
-        prev = time.time()
-        print(image_full.shape)
-        image_full = image_full[int(image_full.shape[0]/4) : int(3*image_full.shape[0]/4), int(image_full.shape[1]/4) : int(3*image_full.shape[1]/4)]
 
+        image_full = image_full[int(image_full.shape[0]/5) : int(4*image_full.shape[0]/5), int(image_full.shape[1]/5) : int(4*image_full.shape[1]/5)]
+        # cv2.imshow("YOLOv8 Tracking cropped", image_full)
         # PERSON DETECTION
         results = modelYolo.track(image_full, persist=True)
-        annotated_frame = results[0].plot()
-
+        print("process time:" + str(time.time() - prev))
+        # annotated_frame = results[0].plot()
+        annotated_frame = image_full
         if results[0].boxes.id == None:  # если объект появлялся на камере и при этом пропал из списка обнаруженных
-            cv2.imshow("YOLOv8 Tracking", annotated_frame)
             continue
 
         if detected_track_id == -1:
             person_inds = [i for i, j in enumerate(results[0].boxes.cls.int().tolist()) if j == 0]  # получаем айдишники для объектов == человек в векторе айдишников
             if len(person_inds) == 0: # нормально, если первым кадром нейронка спутала человека с котом
-                cv2.imshow("YOLOv8 Tracking", annotated_frame)
                 continue
 
             person_ind = person_inds[0]  # пусть детектим первого попавшегося
@@ -119,11 +117,12 @@ def try_detect_frame(worker_id: int, video_driver_path: str, cap: any, client_nu
         image_person = image_full[xyxy[1]:xyxy[3], xyxy[0]:xyxy[2]]
 
         # HEAD DETECTION
+        print("process time:" + str(time.time() - prev))
         detected = detector(image_person, 1)
+        print("process time:" + str(time.time() - prev))
         faces = np.empty((1, img_size, img_size, 3))
         img_h, img_w, _ = np.shape(image_person)
         if len(detected) == 0:
-            cv2.imshow("YOLOv8 Tracking", annotated_frame)
             continue
 
         x1, y1, x2, y2, w, h = detected[0].left(), detected[0].top(), detected[0].right() + 1, detected[0].bottom() + 1, detected[0].width(), detected[0].height()
@@ -154,7 +153,6 @@ def try_detect_frame(worker_id: int, video_driver_path: str, cap: any, client_nu
         faces = face_classifier.detectMultiScale(image_face, minNeighbors=FACE_CLASSIFIER_MIN_NEIGHBORS, minSize=FACE_CLASSIFIER_MIN_SIZE)
 
         if len(faces) == 0:
-            cv2.imshow("YOLOv8 Tracking", annotated_frame)
             continue
 
         x, y, w, h = faces[0]
@@ -169,7 +167,9 @@ def try_detect_frame(worker_id: int, video_driver_path: str, cap: any, client_nu
         roi = roi / 255
 
         #prediction making
+        print("process time:" + str(time.time() - prev))
         prediction = classifier.predict(roi)
+        print("process time:" + str(time.time() - prev))
         emotion_label = EMOTION_LABELS[np.argmax(prediction)]
         worker[emotion_label] += 1
 
@@ -182,7 +182,7 @@ def try_detect_frame(worker_id: int, video_driver_path: str, cap: any, client_nu
         draw_label(annotated_frame, (0, annotated_frame.shape[0]-50), emotion_label)
 
         cv2.imshow("YOLOv8 Tracking", annotated_frame)
-
+        print("process time:" + str(time.time() - prev))
         if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
 
