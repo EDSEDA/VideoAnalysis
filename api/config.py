@@ -7,8 +7,8 @@ logging.basicConfig(level=logging.INFO)
 class Settings(BaseModel):
     RM_HOST: str = 'localhost'
     RM_PORT: int = 5672
-    RM_USER: str = 'guest'
-    RM_PASSWORD: str = 'guest'
+    RM_USER: str = 'rmuser'
+    RM_PASSWORD: str = 'rmpassword'
 
     DB_HOST: str = 'localhost'
     DB_PORT: int = 5434
@@ -16,6 +16,8 @@ class Settings(BaseModel):
     DB_USER: str = 'postgres'
     DB_PASSWORD: str = 'mysecretpassword'
     DB_ECHO: bool = False
+
+    CHECK_RABBIT_PERIOD: int = 10
 
     class Config:
         env_file = '.env'
@@ -31,6 +33,8 @@ SYNC_DB_URL = f'postgresql://{DB_URL}'
 WORK_SCHEMA = 'test_name'
 
 EMOTION_LABELS = ['anger', 'fear', 'happy', 'neutral', 'sadness', 'surprized']
+
+RABBITMQ_URL = f'amqp://{settings.RM_USER}:{settings.RM_PASSWORD}@{settings.RM_HOST}:{settings.RM_PORT}'
 
 
 class Paths(BaseModel):
