@@ -65,10 +65,6 @@ const createFranchise = (company: Company) => {
     const happy = randomTrandIntArr(12, Math.floor((total - neutral[0]) * Math.random()), 10000, -0.1);
     const sad = randomTrandIntArr(12, Math.floor((total - neutral[0] - happy[0]) * Math.random()), 10000, 0.1);
 
-    neutral.reverse();
-    happy.reverse();
-    sad.reverse();
-
     return {
         name: 'Franchise ' + Math.floor(Math.random() * 1000),
         totalClients: total,
