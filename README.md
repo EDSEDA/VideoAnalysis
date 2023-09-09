@@ -1,12 +1,10 @@
 # EDA (emotion decetion app)
 
-**README по каждому сервису:**
-* emotion detector: [**README.md**](./emotion_detector/README.md)
-* gui: [**README**](./gui/README.md)
-* learning: [**README**](./learning/README.md)
-* server: [**README**](./server/README.md)
+### Services:
+- [Learning](./learning)
+- [Emotion detector:](./emotion_detector)
+- [Frontend](./client1)
+- [Backend](./server)
 
-
-
-# Start
-For start RESTApi server: ```run app.py```
+### Start
+- RESTApi server: `run app.py`

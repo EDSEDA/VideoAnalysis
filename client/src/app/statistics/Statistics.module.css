@@ -1,0 +1,75 @@
+.select {
+    width: 350px;
+}
+
+.company-info {
+    display: flex;
+    column-gap: 80px;
+}
+
+.block {
+    width: 400px;
+    display: flex;
+    column-gap: 40px;
+
+    padding: 20px 40px;
+    border: 1px solid black;
+    border-radius: 10px;
+}
+
+.block_img {
+    flex-shrink: 0;
+}
+
+.__purple {
+    color: rgb(138, 59, 215);
+    border-color: rgba(138, 59, 215);
+    background-color: rgba(151, 83, 217, 0.05);
+}
+
+.__blue {
+    color: rgba(56, 114, 255);
+    border-color: rgb(56, 114, 255);
+    background-color: rgba(56, 114, 255, 0.05);
+}
+
+.block_header {
+    font-weight: bold;
+    font-size: 1.2rem;
+}
+
+.block_text {
+    color: rgb(107, 108, 114);
+}
+
+.separator {
+    border-top: 1px solid rgb(176, 198, 255);
+}
+
+.bar-plot {
+    height: 325px;
+}
+
+.line-plot_header-cnt {
+    display: flex;
+    align-items: center;
+    column-gap: 40px;
+}
+
+.line-plot_header {
+    margin-right: auto;
+}
+
+.line-plot {
+    height: 325px;
+}
+
+.additional-info {
+    display: flex;
+    column-gap: 80px;
+}
+
+.additional-info_item {
+    display: flex;
+    column-gap: 15px;
+}
