@@ -28,20 +28,24 @@ def mq_recv(callback: callable):  # формат колбэк функции: ca
 
 
 class Message(BaseModel):
+    worker_id: int
     anger: int
     fear: int
     happy: int
     neutral: int
     sadness: int
     surprized: int
-    worker_id: int
     age_group: int
     sex: int
     consultation_time: int
     date: int
-
+    """
+    sex 
+    placement_point =
+    """
 
 async def save_message_to_database(message_body: str):
+    # test msg {"anger":0, "fear":11, "happy":0, "neutral":84, "sadness":14, "surprized":0, "worker_id":17, "age_group":32, "sex":0, "consultation_time":110, "date":1694221445}
     if message_body:
         payload = Message.model_validate(json.loads(message_body))
         logging.info(f'message received: {payload}')
@@ -63,8 +67,10 @@ async def consume_messages(loop):
         async with queue.iterator() as queue_iter:
             async for message in queue_iter:
                 async with message.process():
-                    await save_message_to_database(message.body.decode())
-
+                    try:
+                        await save_message_to_database(message.body.decode())
+                    except Exception as e:
+                        logging.error(e)
 
 async def start_message_consumer(loop):
     logging.info('Start rabbit message consumer')

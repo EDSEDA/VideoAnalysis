@@ -40,7 +40,7 @@ class Shop(Base, WithID, ConfigMixin):
 class Emotion(Base, WithID, ConfigMixin):
     __tablename__ = "emotion"
     __table_args__ = {**ConfigMixin.__table_args__, **{'comment': 'Emotions metrics'}}
-    user_id = Column(Integer(), ForeignKey(User.id, ondelete='CASCADE'), nullable=False, comment='Сборщик эмоций')
+    worker_id = Column(Integer(), ForeignKey(User.id, ondelete='CASCADE'), nullable=False, comment='Сборщик эмоций')
     anger = Column(Integer())
     fear = Column(Integer())
     happy = Column(Integer())
@@ -48,5 +48,6 @@ class Emotion(Base, WithID, ConfigMixin):
     sadness = Column(Integer())
     surprized = Column(Integer())
     datetime = Column(DateTime())
+    sex = Column(Boolean())
     placement_point = Column(Integer(), ForeignKey(Shop.id, ondelete='CASCADE'), nullable=False,
                              comment='Место сбора данных')

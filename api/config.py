@@ -7,8 +7,8 @@ logging.basicConfig(level=logging.INFO)
 class Settings(BaseModel):
     RM_HOST: str = 'localhost'
     RM_PORT: int = 5672
-    RM_USER: str = 'guest'
-    RM_PASSWORD: str = 'guest'
+    RM_USER: str = 'rmuser'
+    RM_PASSWORD: str = 'rmpassword'
 
     DB_HOST: str = 'localhost'
     DB_PORT: int = 5434
