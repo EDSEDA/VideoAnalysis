@@ -16,3 +16,15 @@ class UserEmotions(Emotions):
     datetime: datetime
     sex: bool
     placement_point: int
+
+
+class Shop(BaseModel):
+    id: int
+    name: str
+
+
+class User(BaseModel):
+    id: int
+    name: str
+    lastname: str
+    role: str
