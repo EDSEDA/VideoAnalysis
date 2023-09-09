@@ -17,7 +17,7 @@ class Settings(BaseModel):
     DB_PASSWORD: str = 'mysecretpassword'
     DB_ECHO: bool = False
 
-    CHECK_RABBIT_PERIOD: int = 10
+    CHECK_RABBIT_PERIOD: int = 1
 
     class Config:
         env_file = '.env'
