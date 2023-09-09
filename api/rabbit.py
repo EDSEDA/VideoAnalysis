@@ -71,6 +71,7 @@ async def save_message_to_database(message_body: str):
                                                             fromtimestamp(payload.consultation_time),
                                                             sex=payload.sex,
                                                             placement_point=payload.placement_point)))
+        await session().commit()
 
 
 async def consume_messages(loop):
