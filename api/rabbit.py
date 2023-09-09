@@ -1,4 +1,5 @@
 import json
+import datetime
 
 import pika
 from api.config import settings, logging, RABBITMQ_URL
@@ -58,6 +59,18 @@ async def save_message_to_database(message_body: str):
         if not shop:
             await session().execute(insert(Shop).values(dict(id=payload.placement_point,
                                                              name='test_shop')))
+
+        await session().execute(insert(Emotion).values(dict(worker_id=payload.worker_id,
+                                                            anger=payload.anger,
+                                                            fear=payload.fear,
+                                                            happy=payload.happy,
+                                                            neutral=payload.neutral,
+                                                            sadness=payload.sadness,
+                                                            surprized=payload.surprized,
+                                                            datetime=datetime.datetime.
+                                                            fromtimestamp(payload.consultation_time),
+                                                            sex=payload.sex,
+                                                            placement_point=payload.placement_point)))
 
 
 async def consume_messages(loop):
