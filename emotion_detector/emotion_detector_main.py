@@ -82,7 +82,7 @@ def try_detect_frame(worker_id: int, video_driver_path: str, cap: any, client_nu
             continue
 
 
-        image_full = image_full[int(image_full.shape[0]/5) : int(4*image_full.shape[0]/5), int(image_full.shape[1]/5) : int(4*image_full.shape[1]/5)]
+        # image_full = image_full[int(image_full.shape[0]/5) : int(4*image_full.shape[0]/5), int(image_full.shape[1]/5) : int(4*image_full.shape[1]/5)]
         # cv2.imshow("YOLOv8 Tracking cropped", image_full)
         # PERSON DETECTION
         results = modelYolo.track(image_full, persist=True)
@@ -175,9 +175,9 @@ def try_detect_frame(worker_id: int, video_driver_path: str, cap: any, client_nu
 
         label_person1 = "service time: {} sec".format(int(time.time() - session_start_time))
         draw_label(annotated_frame, (0, annotated_frame.shape[0]-10), label_person1)
-        label_person2 = "client number: {}".format(client_number)
+        label_person2 = "client counter: {}".format(client_number)
         draw_label(annotated_frame, (0, annotated_frame.shape[0]-30), label_person2)
-        label_head1 = "ages: {}".format(int(age_avg))
+        label_head1 = "age: {}".format(int(age_avg))
         draw_label(annotated_frame, (0, annotated_frame.shape[0]-50), label_head1)
         label_head2 = "sex: {}".format("Male" if sex_avg < 0.5 else "Female")
         draw_label(annotated_frame, (0, annotated_frame.shape[0]-70), label_head2)
