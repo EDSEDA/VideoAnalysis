@@ -16,9 +16,10 @@ app = FastAPI()
 @app.on_event("startup")
 async def startup():
     migrate()
-    asyncio.create_task(start_message_consumer(loop=asyncio.get_event_loop()))
     async with async_session() as session:
         set_session(session)
+    asyncio.create_task(start_message_consumer(loop=asyncio.get_event_loop()))
+
 
 
 @app.on_event("shutdown")

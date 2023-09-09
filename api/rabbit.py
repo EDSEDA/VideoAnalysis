@@ -2,8 +2,11 @@ import json
 
 import pika
 from api.config import settings, logging, RABBITMQ_URL
+from api.model import Shop, User, Emotion
 from pydantic import BaseModel
 import aio_pika
+from api.context import session
+from sqlalchemy import select, insert
 
 exchanger_name = 'camera_to_server'
 queue_name = 'camera_to_server'
@@ -39,16 +42,22 @@ class Message(BaseModel):
     sex: int
     consultation_time: int
     date: int
-    """
-    sex 
-    placement_point =
-    """
+    placement_point: int = 1
+
 
 async def save_message_to_database(message_body: str):
     # test msg {"anger":0, "fear":11, "happy":0, "neutral":84, "sadness":14, "surprized":0, "worker_id":17, "age_group":32, "sex":0, "consultation_time":110, "date":1694221445}
     if message_body:
         payload = Message.model_validate(json.loads(message_body))
         logging.info(f'message received: {payload}')
+        worker = (await session().execute(select(User).where(User.id == payload.worker_id))).scalars().one_or_none()
+        if not worker:
+            await session().execute(insert(User).values(dict(id=payload.worker_id,
+                                                             name='test_worker')))
+        shop = (await session().execute(select(Shop).where(Shop.id == payload.placement_point))).scalars().one_or_none()
+        if not shop:
+            await session().execute(insert(Shop).values(dict(id=payload.placement_point,
+                                                             name='test_shop')))
 
 
 async def consume_messages(loop):
@@ -71,6 +80,7 @@ async def consume_messages(loop):
                         await save_message_to_database(message.body.decode())
                     except Exception as e:
                         logging.error(e)
+
 
 async def start_message_consumer(loop):
     logging.info('Start rabbit message consumer')
