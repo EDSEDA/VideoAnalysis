@@ -12,5 +12,7 @@ class Emotions(BaseModel):
 
 
 class UserEmotions(Emotions):
-    user_id: int
+    worker_id: int
     datetime: datetime
+    sex: bool
+    placement_point: int

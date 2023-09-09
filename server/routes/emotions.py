@@ -20,6 +20,5 @@ async def get_emotions():
     """
     Вернуть все значения эмоций всех пользователей
     """
-    r = (await session().execute(select(Emotion))).fetchall()
-    print(r)
-    return ...
+    emotions = (await session().execute(select(Emotion))).scalars()
+    return emotions

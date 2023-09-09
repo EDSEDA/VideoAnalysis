@@ -4,6 +4,7 @@ import asyncio
 import uvicorn
 from fastapi import FastAPI
 from api.db import migrate, async_session
+from api.middlewire import SessionMiddleware
 from api.context import set_session
 from server.routes import emotions
 from api.utils import create_routes
@@ -11,15 +12,15 @@ from api.rabbit import start_message_consumer
 
 
 app = FastAPI()
+app.add_middleware(SessionMiddleware)
 
 
 @app.on_event("startup")
 async def startup():
     migrate()
-    async with async_session() as session:
-        set_session(session)
+    # async with async_session() as session:
+    #     set_session(session)
     asyncio.create_task(start_message_consumer(loop=asyncio.get_event_loop()))
-
 
 
 @app.on_event("shutdown")
