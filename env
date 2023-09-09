@@ -1,0 +1,9 @@
+RM_HOST='localhost'
+RM_PORT=5672
+RM_USER='guest'
+RM_PASSWORD='guest'
+DB_HOST='localhost'
+DB_PORT=5434
+DB_DATABASE='postgres'
+DB_USER='postgres'
+DB_PASSWORD='mysecretpassword'

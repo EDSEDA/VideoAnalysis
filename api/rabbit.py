@@ -27,7 +27,17 @@ def mq_recv(callback: callable):  # формат колбэк функции: ca
 
 
 class Message(BaseModel):
-    body: str
+    anger: int
+    fear: int
+    happy: int
+    neutral: int
+    sadness: int
+    surprized: int
+    worker_id: int
+    age_group: int
+    sex: int
+    consultation_time: int
+    date: int
 
 
 async def save_message_to_database(message_body: str):

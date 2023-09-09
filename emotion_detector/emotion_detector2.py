@@ -170,16 +170,19 @@ def try_detect_frame(worker_id: int, video_driver_path: str, cap: any, client_nu
         print("process time:" + str(time.time() - prev))
         prediction = classifier.predict(roi)
         print("process time:" + str(time.time() - prev))
-        emotion_label = EMOTION_LABELS[np.argmax(prediction)]
-        worker[emotion_label] += 1
+        emotion = EMOTION_LABELS[np.argmax(prediction)]
+        worker[emotion] += 1
 
-        label_person = "service time: {} sec, client number: {}".format(int(time.time() - session_start_time), client_number)
-        draw_label(annotated_frame, (0, annotated_frame.shape[0]-10), label_person)
-
-        label_head = "ages: {}, sex: {}".format(int(age_avg), "Male" if sex_avg < 0.5 else "Female")
-        draw_label(annotated_frame, (0, annotated_frame.shape[0]-30), label_head)
-
-        draw_label(annotated_frame, (0, annotated_frame.shape[0]-50), emotion_label)
+        label_person1 = "service time: {} sec".format(int(time.time() - session_start_time))
+        draw_label(annotated_frame, (0, annotated_frame.shape[0]-10), label_person1)
+        label_person2 = "client number: {}".format(client_number)
+        draw_label(annotated_frame, (0, annotated_frame.shape[0]-30), label_person2)
+        label_head1 = "ages: {}".format(int(age_avg))
+        draw_label(annotated_frame, (0, annotated_frame.shape[0]-50), label_head1)
+        label_head2 = "sex: {}".format("Male" if sex_avg < 0.5 else "Female")
+        draw_label(annotated_frame, (0, annotated_frame.shape[0]-70), label_head2)
+        label_emotion = "emotion: {}".format(emotion)
+        draw_label(annotated_frame, (0, annotated_frame.shape[0]-90), label_emotion)
 
         cv2.imshow("YOLOv8 Tracking", annotated_frame)
         print("process time:" + str(time.time() - prev))
