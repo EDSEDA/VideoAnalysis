@@ -1,3 +1,4 @@
+
 import cv2
 import numpy as np
 import time
@@ -10,16 +11,16 @@ from threading import Thread, Lock
 from api.rabbit import mq_send
 from api.config import EMOTION_LABELS, paths
 
+
 FRAME_RATE = 10
-FACE_CLASSIFIER_MIN_NEIGHBORS = 10
-FACE_CLASSIFIER_MIN_SIZE = (40, 40)
+FACE_CLASSIFIER_MIN_NEIGHBORS=10
+FACE_CLASSIFIER_MIN_SIZE=(40, 40)
 
 mutex = Lock()
 
-
 def try_detect_frame(worker_id: int, video_driver_path: str):
     cap = cv2.VideoCapture(video_driver_path)
-    workers[worker_id] = dict.fromkeys(EMOTION_LABELS, 0)  # для каждого айдишника в словаре задаем словарь эмоций
+    workers[worker_id] = dict.fromkeys(EMOTION_LABELS, 0) # для каждого айдишника в словаре задаем словарь эмоций
     prev = 0
     while True:
 
@@ -67,9 +68,9 @@ def send_buffer():
         workers["date"] = int(datetime.now().timestamp())
         with mutex:
             mq_send(json.dumps(workers))
-            for value in workers.values():
-                for key in EMOTION_LABELS:
-                    value[key] = 0
+            # for value in workers.values():
+            #     for key in EMOTION_LABELS:
+                    # value[key] = 0
 
 
 face_classifier = cv2.CascadeClassifier(paths.FACE_CLASSIFIER_PATH)  # детектор лица OpenCV

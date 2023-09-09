@@ -1,8 +1,9 @@
+import json
+
 import pika
 from api.config import settings, logging, RABBITMQ_URL
 from pydantic import BaseModel
-import asyncio
-import aiormq
+import aio_pika
 
 exchanger_name = 'camera_to_server'
 queue_name = 'camera_to_server'
@@ -27,27 +28,44 @@ def mq_recv(callback: callable):  # формат колбэк функции: ca
 
 
 class Message(BaseModel):
-    body: str
+    anger: int
+    fear: int
+    happy: int
+    neutral: int
+    sadness: int
+    surprized: int
+    worker_id: int
+    age_group: int
+    sex: int
+    consultation_time: int
+    date: int
 
 
 async def save_message_to_database(message_body: str):
     if message_body:
-        logging.info(f'message received: {message_body}')
+        payload = Message.model_validate(json.loads(message_body))
+        logging.info(f'message received: {payload}')
 
 
-async def consume_messages():
-    connection = await aiormq.connect(url=RABBITMQ_URL)
-    channel = await connection.channel()
-    await channel.queue_declare(queue_name)
-    while True:
-        message = await channel.basic_get(queue_name)
-        if message:
-            message_body = message.body.decode()
-            await save_message_to_database(message_body)
-        await asyncio.sleep(settings.CHECK_RABBIT_PERIOD)
+async def consume_messages(loop):
+    connection = await aio_pika.connect_robust(
+        RABBITMQ_URL, loop=loop
+    )
+
+    async with connection:
+
+        channel: aio_pika.abc.AbstractChannel = await connection.channel()
+
+        queue: aio_pika.abc.AbstractQueue = await channel.declare_queue(
+            queue_name
+        )
+
+        async with queue.iterator() as queue_iter:
+            async for message in queue_iter:
+                async with message.process():
+                    await save_message_to_database(message.body.decode())
 
 
-async def start_message_consumer():
+async def start_message_consumer(loop):
     logging.info('Start rabbit message consumer')
-    while True:
-        await consume_messages()
+    await consume_messages(loop=loop)

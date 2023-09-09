@@ -7,8 +7,8 @@ logging.basicConfig(level=logging.INFO)
 class Settings(BaseModel):
     RM_HOST: str = 'localhost'
     RM_PORT: int = 5672
-    RM_USER: str = 'rmuser'
-    RM_PASSWORD: str = 'rmpassword'
+    RM_USER: str = 'guest'
+    RM_PASSWORD: str = 'guest'
 
     DB_HOST: str = 'localhost'
     DB_PORT: int = 5434
@@ -17,7 +17,7 @@ class Settings(BaseModel):
     DB_PASSWORD: str = 'mysecretpassword'
     DB_ECHO: bool = False
 
-    CHECK_RABBIT_PERIOD: int = 10
+    CHECK_RABBIT_PERIOD: int = 1
 
     class Config:
         env_file = '.env'

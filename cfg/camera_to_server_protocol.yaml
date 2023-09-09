@@ -14,6 +14,14 @@ components:
           type: integer
         timestammp:
           type: integer
+        sex:
+          type: boolean
+        age_group:
+          description: 0 - child; 1 - young; 2 - adults; 3 - old_man
+          type: integer
+        consultation_time:
+          description: sec
+          type: integer
         anger:
           type: integer
         fear:

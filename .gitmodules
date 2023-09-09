@@ -1,0 +1,3 @@
+[submodule "thirdparty/age_gender"]
+	path = thirdparty/age_gender
+	url = https://github.com/yu4u/age-gender-estimation.git
