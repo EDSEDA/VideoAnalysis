@@ -8,3 +8,7 @@
 
 ### Start
 - RESTApi server: `run app.py`
+
+### Description
+
+![Work scheme](./doc/work_scheme.png)
