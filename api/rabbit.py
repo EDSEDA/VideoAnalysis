@@ -1,5 +1,6 @@
 import json
 import datetime
+from typing import Union, Optional
 
 import pika
 from api.config import settings, logging, RABBITMQ_URL
@@ -32,7 +33,7 @@ def mq_recv(callback: callable):  # формат колбэк функции: ca
 
 
 class Message(BaseModel):
-    worker_id: int
+    worker_id: int      # если правильно понимаю, то тут нейронка должна давать id распознанного лица
     anger: int
     fear: int
     happy: int
@@ -41,24 +42,33 @@ class Message(BaseModel):
     surprized: int
     age_group: int
     sex: int
+    datetime_start: int
     consultation_time: int
-    date: int
-    placement_point: int = 1
+    placement_point: int = 1    # надо убрать "= 1"
+    address: Optional[str]
 
 
 async def save_message_to_database(message_body: str):
-    # test msg {"anger":0, "fear":11, "happy":0, "neutral":84, "sadness":14, "surprized":0, "worker_id":17, "age_group":32, "sex":0, "consultation_time":110, "date":1694221445}
+    """
+     test msg
+     {"anger":0, "fear":11, "happy":0, "neutral":84, "sadness":14, "surprized":0, "worker_id":17, "age_group":32,
+     "sex":0, "consultation_time":110, "date":1694221445}
+    """
     if message_body:
         payload = Message.model_validate(json.loads(message_body))
-        logging.info(f'message received: {payload}')
+        logging.info(f'Message received: {payload}')
         worker = (await session().execute(select(Visitor).where(Visitor.id == payload.worker_id))).scalars().one_or_none()
         if not worker:
             await session().execute(insert(Visitor).values(dict(id=payload.worker_id,
-                                                                name='test_worker')))
+                                                                name='test_worker',
+                                                                sex=payload.sex,
+                                                                age=payload.age_group)))
         shop = (await session().execute(select(Shop).where(Shop.id == payload.placement_point))).scalars().one_or_none()
         if not shop:
             await session().execute(insert(Shop).values(dict(id=payload.placement_point,
-                                                             name='test_shop')))
+                                                             name='test_shop',
+                                                             address=payload.address,
+                                                             )))
 
         await session().execute(insert(Emotion).values(dict(worker_id=payload.worker_id,
                                                             anger=payload.anger,
@@ -67,7 +77,9 @@ async def save_message_to_database(message_body: str):
                                                             neutral=payload.neutral,
                                                             sadness=payload.sadness,
                                                             surprized=payload.surprized,
-                                                            datetime=datetime.datetime.
+                                                            datetime_start=datetime.datetime.
+                                                            fromtimestamp(payload.datetime_start),
+                                                            consultation_time=datetime.datetime.
                                                             fromtimestamp(payload.consultation_time),
                                                             sex=payload.sex,
                                                             placement_point=payload.placement_point)))

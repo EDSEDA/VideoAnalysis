@@ -1,3 +1,5 @@
+from typing import Union
+
 from pydantic import BaseModel
 from datetime import datetime
 
@@ -12,19 +14,21 @@ class Emotions(BaseModel):
 
 
 class UserEmotions(Emotions):
-    worker_id: int
-    datetime: datetime
-    sex: bool
+    visitor_id: int
+    datetime_start: Union[datetime, None]
+    consultation_time: Union[datetime, None]
+    sex: Union[bool, None]
     placement_point: int
 
 
 class Shop(BaseModel):
     id: int
     name: str
+    address: str
 
 
 class Visitor(BaseModel):
     id: int
     name: str
-    lastname: str
-    role: str
+    lastname: Union[str, None]
+    role: Union[str, None]

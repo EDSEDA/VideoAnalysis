@@ -28,7 +28,7 @@ class Visitor(Base, WithID, ConfigMixin):
     __table_args__ = {**ConfigMixin.__table_args__, **{'comment': 'User of system'}}
     name = Column(String(), comment='Name')
     lastname = Column(String(), comment='Lastname')
-    role = Column(Boolean(), comment='Visitors role')
+    role = Column(String(), comment='Visitors role')            # todo enum
     age = Column(Integer(), comment='Visitors age')
     sex = Column(Integer(), comment='Visitors sex')
 
@@ -52,4 +52,5 @@ class Emotion(Base, WithID, ConfigMixin):
     neutral = Column(Integer())
     sadness = Column(Integer())
     surprized = Column(Integer())
-    datetime = Column(DateTime())
+    datetime_start = Column(DateTime())
+    consultation_time = Column(DateTime())
