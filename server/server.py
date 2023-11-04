@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from api.db import migrate, async_session
 from api.middlewire import SessionMiddleware
 from api.context import set_session
-from server.routes import emotions, shop, worker
+from server.routes import emotions, shop, visitor
 from api.utils import create_routes
 from api.rabbit import start_message_consumer
 
@@ -28,7 +28,7 @@ async def shutdown():
     pass
 
 
-create_routes(app, emotions, shop, worker)
+create_routes(app, emotions, shop, visitor)
 
 
 def run():

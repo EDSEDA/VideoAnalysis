@@ -23,7 +23,7 @@ class Shop(BaseModel):
     name: str
 
 
-class User(BaseModel):
+class Visitor(BaseModel):
     id: int
     name: str
     lastname: str

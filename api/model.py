@@ -23,24 +23,29 @@ class ConfigMixin:
     __table_args__ = {'schema': WORK_SCHEMA}
 
 
-class User(Base, WithID, ConfigMixin):
-    __tablename__ = "user"
+class Visitor(Base, WithID, ConfigMixin):
+    __tablename__ = "visitor"
     __table_args__ = {**ConfigMixin.__table_args__, **{'comment': 'User of system'}}
     name = Column(String(), comment='Name')
     lastname = Column(String(), comment='Lastname')
-    role = Column(Boolean(), comment='Users role')
+    role = Column(Boolean(), comment='Visitors role')
+    age = Column(Integer(), comment='Visitors age')
+    sex = Column(Integer(), comment='Visitors sex')
 
 
 class Shop(Base, WithID, ConfigMixin):
     __tablename__ = "shop"
     __table_args__ = {**ConfigMixin.__table_args__, **{'comment': 'Shop info'}}
     name = Column(String(), comment='Name')
+    address = Column(String())
 
 
 class Emotion(Base, WithID, ConfigMixin):
     __tablename__ = "emotion"
     __table_args__ = {**ConfigMixin.__table_args__, **{'comment': 'Emotions metrics'}}
-    worker_id = Column(Integer(), ForeignKey(User.id, ondelete='CASCADE'), nullable=False, comment='Сборщик эмоций')
+    visitor_id = Column(Integer(), ForeignKey(Visitor.id, ondelete='CASCADE'), nullable=False, comment='Сборщик эмоций')
+    placement_point = Column(Integer(), ForeignKey(Shop.id, ondelete='CASCADE'), nullable=False,
+                             comment='Место сбора данных')
     anger = Column(Integer())
     fear = Column(Integer())
     happy = Column(Integer())
@@ -48,6 +53,3 @@ class Emotion(Base, WithID, ConfigMixin):
     sadness = Column(Integer())
     surprized = Column(Integer())
     datetime = Column(DateTime())
-    sex = Column(Boolean())
-    placement_point = Column(Integer(), ForeignKey(Shop.id, ondelete='CASCADE'), nullable=False,
-                             comment='Место сбора данных')

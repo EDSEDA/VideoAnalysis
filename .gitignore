@@ -5,3 +5,4 @@ learning/data2/
 /venv
 learning/data
 models
+/.env

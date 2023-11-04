@@ -5,6 +5,7 @@ import json
 import yaml
 import dlib
 import sys
+
 sys.path.append('..')
 
 from tensorflow.keras import applications
@@ -21,9 +22,9 @@ from ultralytics import YOLO
 from omegaconf import OmegaConf
 from pathlib import Path
 
-REAL_FPS=5
-FACE_CLASSIFIER_MIN_NEIGHBORS=12
-FACE_CLASSIFIER_MIN_SIZE=(56, 56)
+REAL_FPS = 5
+FACE_CLASSIFIER_MIN_NEIGHBORS = 12
+FACE_CLASSIFIER_MIN_SIZE = (56, 56)
 
 mutex = Lock()
 modelYolo = YOLO('../models/yolov8n.pt')
@@ -35,6 +36,7 @@ def draw_label(image, point, label, font=cv2.FONT_HERSHEY_SIMPLEX,
     x, y = point
     cv2.rectangle(image, (x, y - size[1]), (x + size[0], y), (255, 0, 0), cv2.FILLED)
     cv2.putText(image, label, point, font, font_scale, (255, 255, 255), thickness, lineType=cv2.LINE_AA)
+
 
 def get_model(cfg):
     base_model = getattr(applications, cfg.model.model_name)(
@@ -48,6 +50,7 @@ def get_model(cfg):
     model = Model(inputs=base_model.input, outputs=[pred_sex, pred_age])
     return model
 
+
 detector = dlib.get_frontal_face_detector()
 model_name, img_size = Path("EfficientNetB3_224_weights.11-3.44.hdf5").stem.split("_")[:2]
 img_size = int(img_size)
@@ -56,10 +59,9 @@ model = get_model(cfg)
 model.load_weights("../models/EfficientNetB3_224_weights.11-3.44.hdf5")
 
 
-
 def try_detect_frame(worker_id: int, video_driver_path: str, cap: any, client_number: int):
     print("new detection")
-    worker = dict.fromkeys(EMOTION_LABELS, 0)# для каждого айдишника в словаре задаем словарь эмоций
+    worker = dict.fromkeys(EMOTION_LABELS, 0)  # для каждого айдишника в словаре задаем словарь эмоций
     worker["worker_id"] = worker_id
 
     prev = 0
@@ -78,7 +80,8 @@ def try_detect_frame(worker_id: int, video_driver_path: str, cap: any, client_nu
             break
 
         print(cap.get(cv2.CAP_PROP_FPS))
-        if int(cap.get(cv2.CAP_PROP_FPS)/REAL_FPS) != kostyl: # программа захватит все кадры и будет тормозить, необходимо отбросить большую часть
+        if int(cap.get(
+                cv2.CAP_PROP_FPS) / REAL_FPS) != kostyl:  # программа захватит все кадры и будет тормозить, необходимо отбросить большую часть
             kostyl += 1
             continue
         kostyl = 1
@@ -88,7 +91,6 @@ def try_detect_frame(worker_id: int, video_driver_path: str, cap: any, client_nu
         if is_frame == False:
             print("no frame")
             continue
-
 
         # image_full = image_full[int(image_full.shape[0]/5) : int(4*image_full.shape[0]/5), int(image_full.shape[1]/5) : int(4*image_full.shape[1]/5)]
         cv2.imshow("YOLOv8 Tracking cropped", image_full)
@@ -101,12 +103,14 @@ def try_detect_frame(worker_id: int, video_driver_path: str, cap: any, client_nu
             continue
 
         if detected_track_id == -1:
-            person_inds = [i for i, j in enumerate(results[0].boxes.cls.int().tolist()) if j == 0]  # получаем айдишники для объектов == человек в векторе айдишников
-            if len(person_inds) == 0: # нормально, если первым кадром нейронка спутала человека с котом
+            person_inds = [i for i, j in enumerate(results[0].boxes.cls.int().tolist()) if
+                           j == 0]  # получаем айдишники для объектов == человек в векторе айдишников
+            if len(person_inds) == 0:  # нормально, если первым кадром нейронка спутала человека с котом
                 continue
 
             person_ind = person_inds[0]  # пусть детектим первого попавшегося
-            detected_track_id = results[0].boxes.id.int().tolist()[person_ind]  # достаем айдишник объекта и сохраняем его
+            detected_track_id = results[0].boxes.id.int().tolist()[
+                person_ind]  # достаем айдишник объекта и сохраняем его
             session_start_time = time.time()
 
         is_required_id_exist = False
@@ -133,7 +137,8 @@ def try_detect_frame(worker_id: int, video_driver_path: str, cap: any, client_nu
         if len(detected) == 0:
             continue
 
-        x1, y1, x2, y2, w, h = detected[0].left(), detected[0].top(), detected[0].right() + 1, detected[0].bottom() + 1, detected[0].width(), detected[0].height()
+        x1, y1, x2, y2, w, h = detected[0].left(), detected[0].top(), detected[0].right() + 1, detected[0].bottom() + 1, \
+        detected[0].width(), detected[0].height()
         xw1 = max(int(x1 - 0.3 * w), 0)
         yw1 = max(int(y1 - 0.3 * h), 0)
         xw2 = min(int(x2 + 0.3 * w), img_w - 1)
@@ -158,7 +163,8 @@ def try_detect_frame(worker_id: int, video_driver_path: str, cap: any, client_nu
         # FACE DETECTION
         image_face = cv2.cvtColor(image_head, cv2.COLOR_BGR2GRAY)
         image_face = cv2.cvtColor(image_face, cv2.COLOR_GRAY2RGB)
-        faces = face_classifier.detectMultiScale(image_face, minNeighbors=FACE_CLASSIFIER_MIN_NEIGHBORS, minSize=FACE_CLASSIFIER_MIN_SIZE)
+        faces = face_classifier.detectMultiScale(image_face, minNeighbors=FACE_CLASSIFIER_MIN_NEIGHBORS,
+                                                 minSize=FACE_CLASSIFIER_MIN_SIZE)
 
         if len(faces) == 0:
             continue
@@ -174,7 +180,7 @@ def try_detect_frame(worker_id: int, video_driver_path: str, cap: any, client_nu
         roi[0] = image_face_resized
         roi = roi / 255
 
-        #prediction making
+        # prediction making
         print("process time:" + str(time.time() - prev))
         prediction = classifier.predict(roi)
         print("process time:" + str(time.time() - prev))
@@ -182,15 +188,15 @@ def try_detect_frame(worker_id: int, video_driver_path: str, cap: any, client_nu
         worker[emotion] += 1
 
         label_person1 = "service time: {} sec".format(int(time.time() - session_start_time))
-        draw_label(annotated_frame, (0, annotated_frame.shape[0]-10), label_person1)
+        draw_label(annotated_frame, (0, annotated_frame.shape[0] - 10), label_person1)
         label_person2 = "client counter: {}".format(client_number)
-        draw_label(annotated_frame, (0, annotated_frame.shape[0]-30), label_person2)
+        draw_label(annotated_frame, (0, annotated_frame.shape[0] - 30), label_person2)
         label_head1 = "age: {}".format(int(age_avg))
-        draw_label(annotated_frame, (0, annotated_frame.shape[0]-50), label_head1)
+        draw_label(annotated_frame, (0, annotated_frame.shape[0] - 50), label_head1)
         label_head2 = "sex: {}".format("Male" if sex_avg < 0.5 else "Female")
-        draw_label(annotated_frame, (0, annotated_frame.shape[0]-70), label_head2)
+        draw_label(annotated_frame, (0, annotated_frame.shape[0] - 70), label_head2)
         label_emotion = "emotion: {}".format(emotion)
-        draw_label(annotated_frame, (0, annotated_frame.shape[0]-90), label_emotion)
+        draw_label(annotated_frame, (0, annotated_frame.shape[0] - 90), label_emotion)
 
         cv2.imshow("YOLOv8 Tracking", annotated_frame)
         print("process time:" + str(time.time() - prev))
@@ -204,7 +210,6 @@ def try_detect_frame(worker_id: int, video_driver_path: str, cap: any, client_nu
     try_detect_frame(worker_id, video_driver_path, cap, client_number if service_time < 10 else client_number + 1)
 
 
-
 face_classifier = cv2.CascadeClassifier(paths.FACE_CLASSIFIER_PATH)  # детектор лица OpenCV
 classifier = load_model(paths.PREDICTION_MODEL_PATH)  # обученная модель для классификации эмоций
 
@@ -213,7 +218,6 @@ with open(paths.CONFIG_PATH, "r") as stream:
         config = yaml.safe_load(stream)
     except yaml.YAMLError as exc:
         print(exc)
-
 
 send_period_s = int(config['send_period_s'])
 # for worker in config['workers']:

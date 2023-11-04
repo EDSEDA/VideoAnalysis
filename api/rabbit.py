@@ -3,7 +3,7 @@ import datetime
 
 import pika
 from api.config import settings, logging, RABBITMQ_URL
-from api.model import Shop, User, Emotion
+from api.model import Shop, Visitor, Emotion
 from pydantic import BaseModel
 import aio_pika
 from api.context import session
@@ -51,10 +51,10 @@ async def save_message_to_database(message_body: str):
     if message_body:
         payload = Message.model_validate(json.loads(message_body))
         logging.info(f'message received: {payload}')
-        worker = (await session().execute(select(User).where(User.id == payload.worker_id))).scalars().one_or_none()
+        worker = (await session().execute(select(Visitor).where(Visitor.id == payload.worker_id))).scalars().one_or_none()
         if not worker:
-            await session().execute(insert(User).values(dict(id=payload.worker_id,
-                                                             name='test_worker')))
+            await session().execute(insert(Visitor).values(dict(id=payload.worker_id,
+                                                                name='test_worker')))
         shop = (await session().execute(select(Shop).where(Shop.id == payload.placement_point))).scalars().one_or_none()
         if not shop:
             await session().execute(insert(Shop).values(dict(id=payload.placement_point,

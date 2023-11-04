@@ -6,7 +6,7 @@ from sqlalchemy import select, insert, delete, text
 from api.utils import module_url
 from api.context import session
 import server.schema as schema
-from api.model import User, Emotion, Shop
+from api.model import Visitor, Emotion, Shop
 
 
 r = APIRouter()
