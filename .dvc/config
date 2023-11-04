@@ -1,5 +1,0 @@
-[core]
-    remote = eda-data
-['remote "eda-data"']
-    url = s3://eda-data
-    endpointurl = https://storage.yandexcloud.net

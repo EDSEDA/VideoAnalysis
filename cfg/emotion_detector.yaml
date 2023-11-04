@@ -1,5 +1,5 @@
 send_period_s: 10
 workers:
   - { id: 17, video_driver_path: "/dev/video0" }
-#  - { id: 16, video_driver_path: "rtsp://vorkov:vorkov@192.168.0.108:554/stream2" }
+#  - { id: 16, video_driver_path: "rtsp://vorkov:vorkov@192.168.0.100:554/stream2" }
 #  - { id: 18, video_driver_path: "/dev/video1" }

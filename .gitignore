@@ -2,6 +2,6 @@
 learning/data/
 learning/data2/
 *cache*
-*tmp*
-/.env
-data/
+/venv
+learning/data
+models

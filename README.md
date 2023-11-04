@@ -2,7 +2,7 @@
 
 ### Services:
 - [Learning](./learning)
-- [Emotion detector:](./emotion_detector)
+- [Emotion detector:](./inference)
 - [Frontend](./client1)
 - [Backend](./server)
 

@@ -7,8 +7,8 @@ logging.basicConfig(level=logging.INFO)
 class Settings(BaseModel):
     RM_HOST: str = 'localhost'
     RM_PORT: int = 5672
-    RM_USER: str = 'rmuser'
-    RM_PASSWORD: str = 'rmpassword'
+    RM_USER: str = 'guest'
+    RM_PASSWORD: str = 'guest'
 
     DB_HOST: str = 'localhost'
     DB_PORT: int = 5434
@@ -32,14 +32,14 @@ SYNC_DB_URL = f'postgresql://{DB_URL}'
 
 WORK_SCHEMA = 'test_name'
 
-EMOTION_LABELS = ['anger', 'fear', 'happy', 'neutral', 'sadness', 'surprized']
+EMOTION_LABELS = ['anger', 'disgust', 'fear', 'happy', 'neutral', 'sadness', "surprise"]
 
 RABBITMQ_URL = f'amqp://{settings.RM_USER}:{settings.RM_PASSWORD}@{settings.RM_HOST}:{settings.RM_PORT}'
 
 
 class Paths(BaseModel):
     FACE_CLASSIFIER_PATH: str = "../cfg/face_detector.xml"
-    PREDICTION_MODEL_PATH: str = "../learning/data/model.h5"
+    PREDICTION_MODEL_PATH: str = "../models/model_pictures_fer.h5"
     CONFIG_PATH: str = "../cfg/emotion_detector.yaml"
 
 
