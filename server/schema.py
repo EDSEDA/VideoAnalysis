@@ -21,8 +21,16 @@ class VisitorEmotions(Emotions):
     placement_point: int
 
 
-class Shop(BaseModel):
+class WithId(BaseModel):
     id: int
+
+
+class Shop(BaseModel):
+    name: str
+    address: str
+
+
+class ShopData(WithId):
     name: str
     address: str
 
