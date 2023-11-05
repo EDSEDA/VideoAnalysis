@@ -38,7 +38,7 @@ async def get_shop(shop_id: int):
 @r.post(BASE + '/')
 async def add_shop(shop: schema.Shop):
     """
-    Вернуть магазин
+    Добавить магазин
     """
     await session().execute(insert(Shop).values(shop.__dict__))
     return
