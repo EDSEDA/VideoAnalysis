@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from typing import List, Union
 
 from sqlalchemy import select, insert, delete, text
@@ -22,3 +22,14 @@ async def get_shops():
     """
     shops = (await session().execute(select(Shop))).scalars()
     return shops
+
+
+@r.get(BASE + '/{shop_id}', response_model=List[schema.Shop])
+async def get_shop(shop_id: int):
+    """
+    Вернуть магазин
+    """
+    visitor = (await session().execute(select(Shop).where(Shop.id == shop_id))).scalars().one_or_none()
+    if not visitor:
+        raise HTTPException(404, "Shop not found")
+    return visitor

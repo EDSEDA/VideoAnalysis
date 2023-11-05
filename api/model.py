@@ -30,7 +30,7 @@ class Visitor(Base, WithID, ConfigMixin):
     lastname = Column(String(), comment='Lastname')
     role = Column(String(), comment='Visitors role')            # todo enum
     age = Column(Integer(), comment='Visitors age')
-    sex = Column(Integer(), comment='Visitors sex')
+    sex = Column(Boolean(), comment='Visitors sex')
 
 
 class Shop(Base, WithID, ConfigMixin):
@@ -53,4 +53,4 @@ class Emotion(Base, WithID, ConfigMixin):
     sadness = Column(Integer())
     surprized = Column(Integer())
     datetime_start = Column(DateTime())
-    consultation_time = Column(DateTime())
+    consultation_time = Column(Integer(), comment='Количество секунд обслуживания клиента')

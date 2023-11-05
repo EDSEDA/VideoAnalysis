@@ -5,7 +5,7 @@ from sqlalchemy import select, insert, delete, text
 
 from api.utils import module_url
 from api.context import session
-from server.schema import UserEmotions
+from server.schema import VisitorEmotions
 from api.model import Visitor, Emotion, Shop
 
 
@@ -15,7 +15,7 @@ BASE = module_url(__name__)
 max_limit = 100
 
 
-@r.get(BASE + '/', response_model=List[UserEmotions])
+@r.get(BASE + '/', response_model=List[VisitorEmotions])
 async def get_emotions():
     """
     Вернуть все значения эмоций всех пользователей

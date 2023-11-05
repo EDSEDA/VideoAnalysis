@@ -1,8 +1,8 @@
 """init
 
-Revision ID: 81c1f444350b
+Revision ID: 507ed0699aae
 Revises: 
-Create Date: 2023-11-04 22:16:33.560863
+Create Date: 2023-11-05 14:54:44.258995
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '81c1f444350b'
+revision: str = '507ed0699aae'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -34,7 +34,7 @@ def upgrade() -> None:
     sa.Column('lastname', sa.String(), nullable=True, comment='Lastname'),
     sa.Column('role', sa.String(), nullable=True, comment='Visitors role'),
     sa.Column('age', sa.Integer(), nullable=True, comment='Visitors age'),
-    sa.Column('sex', sa.Integer(), nullable=True, comment='Visitors sex'),
+    sa.Column('sex', sa.Boolean(), nullable=True, comment='Visitors sex'),
     sa.PrimaryKeyConstraint('id'),
     schema='test_name',
     comment='User of system'
@@ -50,7 +50,7 @@ def upgrade() -> None:
     sa.Column('sadness', sa.Integer(), nullable=True),
     sa.Column('surprized', sa.Integer(), nullable=True),
     sa.Column('datetime_start', sa.DateTime(), nullable=True),
-    sa.Column('consultation_time', sa.DateTime(), nullable=True),
+    sa.Column('consultation_time', sa.Integer(), nullable=True, comment='Количество секунд обслуживания клиента'),
     sa.ForeignKeyConstraint(['placement_point'], ['test_name.shop.id'], ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['visitor_id'], ['test_name.visitor.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id'),

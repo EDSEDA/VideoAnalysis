@@ -1,7 +1,7 @@
-from typing import Union
+from typing import Union, List, Optional
 
 from pydantic import BaseModel
-from datetime import datetime
+from datetime import date
 
 
 class Emotions(BaseModel):
@@ -13,10 +13,10 @@ class Emotions(BaseModel):
     surprized: int
 
 
-class UserEmotions(Emotions):
+class VisitorEmotions(Emotions):
     visitor_id: int
-    datetime_start: Union[datetime, None]
-    consultation_time: Union[datetime, None]
+    datetime_start: Union[date, None]
+    consultation_time: Union[date, None]
     sex: Union[bool, None]
     placement_point: int
 
@@ -32,3 +32,17 @@ class Visitor(BaseModel):
     name: str
     lastname: Union[str, None]
     role: Union[str, None]
+    age: Union[int, None]
+    sex: Union[bool, None]
+
+
+class ShopInfo(Shop):
+    visitors: List[VisitorEmotions]
+
+
+class ShortInfoQueryParams(BaseModel):
+    date_from: Optional[date] = None
+    date_to: Optional[date] = None
+    sex: Optional[bool] = None
+    age: Optional[int] = None
+    shop_id: Optional[int] = None
