@@ -10,6 +10,8 @@ sys.path.append('..')
 from tensorflow.keras import applications
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Dense
+from tensorflow.keras.models import load_model
+
 
 from keras.models import load_model
 from datetime import datetime
@@ -26,7 +28,7 @@ FACE_CLASSIFIER_MIN_NEIGHBORS=12
 FACE_CLASSIFIER_MIN_SIZE=(56, 56)
 
 mutex = Lock()
-modelYolo = YOLO('../models/yolov8n.pt')
+modelYolo = YOLO('../models/yolov8n-face.pt')
 
 
 def draw_label(image, point, label, font=cv2.FONT_HERSHEY_SIMPLEX,
@@ -92,6 +94,7 @@ def try_detect_frame(worker_id: int, video_driver_path: str, cap: any, client_nu
 
         # image_full = image_full[int(image_full.shape[0]/5) : int(4*image_full.shape[0]/5), int(image_full.shape[1]/5) : int(4*image_full.shape[1]/5)]
         cv2.imshow("YOLOv8 Tracking cropped", image_full)
+
         # PERSON DETECTION
         results = modelYolo.track(image_full, persist=True)
         print("process time:" + str(time.time() - prev))
