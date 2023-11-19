@@ -35,6 +35,8 @@ WORK_SCHEMA = 'test_name'
 GENDER_LABELS = ['male', 'female']
 RACES_LABELS = ['white', 'black', 'asian', 'indian', 'others']
 EMOTION_LABELS = ['anger', 'disgust', 'fear', 'happy', 'neutral', 'sadness', "surprise"]
+EMOTION_LABELS_BIN = ['negative', 'neutral', 'positive']
+
 
 RABBITMQ_URL = f'amqp://{settings.RM_USER}:{settings.RM_PASSWORD}@{settings.RM_HOST}:{settings.RM_PORT}'
 
