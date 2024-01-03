@@ -6,6 +6,7 @@ from keras.src.saving.saving_api import load_model
 from ultralytics import YOLO
 import cv2
 import tensorflow as tf
+from deep_sort_realtime.deepsort_tracker import DeepSort
 
 
 from api.config import EMOTION_LABELS, EMOTION_LABELS_BIN, GENDER_LABELS, RACES_LABELS
@@ -143,6 +144,7 @@ def try_detect_frame(worker_id: int, video_driver_path: str, cap: any, client_nu
         cv2.imshow("YOLOv8 Resized", image_resized) # дебажный вывод
 
 modelYolo = YOLO('../models/yolov8n-face.pt')
+tracker = DeepSort(max_age=50)
 model_age = load_model('../models/model_age_48.model')
 model_gen = load_model('../models/model_gen_48.model')
 model_rac = load_model('../models/model_race_48.model')
