@@ -5,10 +5,10 @@ from keras.src.saving.saving_api import load_model
 from ultralytics import YOLO
 from inference.predictor import process_image, predict_image, draw_label
 
-modelYolo = YOLO('../../models/yolov8n-face.pt')
-model_age = load_model('../../models/model_age_48.model')
-model_gen = load_model('../../models/model_gen_48.model')
-model_rac = load_model('../../models/model_race_48.model')
+modelYolo = YOLO('../../../models/yolov8n-face.pt')
+model_age = load_model('../../../models/model_age_48.model')
+model_gen = load_model('../../../models/model_gen_48.model')
+model_rac = load_model('../../../models/model_race_48.model')
 model_emo = load_model(('../../models/model_pictures_fer_bin.h5'))
 
 
