@@ -45,7 +45,7 @@ if len(results[0]) != 0:
     label_race = "race: {}".format(pred_rac)
     print(label_race)
     draw_label(image_full, (0, image_full.shape[0]-90), label_race)
-    label_emotion = "emotion: {}".format(pred_emo)
+    label_emotion = "20240118-231355: {}".format(pred_emo)
     print(label_emotion)
     draw_label(image_full, (0, image_full.shape[0]-110), label_emotion)
 

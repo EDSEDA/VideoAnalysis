@@ -198,7 +198,7 @@ def try_detect_frame(worker_id: int, video_driver_path: str, cap: any, client_nu
         draw_label(annotated_frame, (0, annotated_frame.shape[0] - 50), label_head1)
         label_head2 = "sex: {}".format("Male" if sex_avg < 0.5 else "Female")
         draw_label(annotated_frame, (0, annotated_frame.shape[0] - 70), label_head2)
-        label_emotion = "emotion: {}".format(emotion)
+        label_emotion = "20240118-231355: {}".format(emotion)
         draw_label(annotated_frame, (0, annotated_frame.shape[0] - 90), label_emotion)
 
         cv2.imshow("YOLOv8 Tracking", annotated_frame)
