@@ -1,4 +1,5 @@
 import datetime
+import json
 import time
 from collections import defaultdict
 
@@ -14,6 +15,9 @@ import face_recognition
 
 from api.config import EMOTION_LABELS, EMOTION_LABELS_BIN, GENDER_LABELS, RACES_LABELS
 import models
+from api.rabbit import mq_send
+
+
 
 def to_grayscale_then_rgb(image):
     image = tf.image.rgb_to_grayscale(image)
@@ -103,7 +107,7 @@ def identify(image):
     face_names = []
     for face_encoding in face_encodings:  # Перебираем все эмбеддинги с кадра и ищем в истории похожие эмбединги
         matches = face_recognition.compare_faces(identified_face_encodings, face_encoding, tolerance=0.66)  # За настройку определения похожих эмбедингов отвечает коэффициент tolerance
-        name = "Person_" + str(int(time.time() * 1000000))
+        name = "Unknown Person"
 
         if True in matches:
             first_match_index = matches.index(True)
@@ -178,10 +182,22 @@ def try_detect_frame(worker_id: int, cap: any):
             draw_label(image, (i*400, image.shape[0]-120), label_emotion)
             print("time drowing:", str((datetime.datetime.now() - start).total_seconds()))
 
+            worker = dict()
+            worker["name"] = name
+            worker["carModels"] = carModels[name]
+            worker["gasStation"] = gasStation[name]
+            worker["indexes"] = indexes[name]
+            worker["sails"] = sails[name]
+            worker["recomendations"] = recomendations[name]
+            mq_send(json.dumps(worker))
+
         end = datetime.datetime.now()
         fps = f"FPS: {1 / (end - start).total_seconds():.2f}"
         cv2.putText(image, fps, (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 255, 255), 4)
         cv2.imshow("YOLOv8 Tracking", image)
+
+
+
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -240,6 +256,80 @@ face_locations = face_recognition.face_locations(learned_person)
 learned_person_encoding = face_recognition.face_encodings(learned_person, face_locations)[0]
 identified_face_encodings.append(learned_person_encoding)
 identified_face_names.append(name)
+
+name = "Bondarenko Andrey"
+learned_person = face_recognition.load_image_file("../learning/data/face_recognition_images/person2.1.jpg")
+face_locations = face_recognition.face_locations(learned_person)
+learned_person_encoding = face_recognition.face_encodings(learned_person, face_locations)[0]
+identified_face_encodings.append(learned_person_encoding)
+identified_face_names.append(name)
+
+name = "Sulimenko Nikita"
+learned_person = face_recognition.load_image_file("../learning/data/face_recognition_images/person4.1.jpg")
+face_locations = face_recognition.face_locations(learned_person)
+learned_person_encoding = face_recognition.face_encodings(learned_person, face_locations)[0]
+identified_face_encodings.append(learned_person_encoding)
+identified_face_names.append(name)
+
+name = "Popov Alexander"
+learned_person = face_recognition.load_image_file("../learning/data/face_recognition_images/person5.1.jpg")
+face_locations = face_recognition.face_locations(learned_person)
+learned_person_encoding = face_recognition.face_encodings(learned_person, face_locations)[0]
+identified_face_encodings.append(learned_person_encoding)
+identified_face_names.append(name)
+
+name = "Karatetskaya Maria"
+learned_person = face_recognition.load_image_file("../learning/data/face_recognition_images/person6.1.jpg")
+face_locations = face_recognition.face_locations(learned_person)
+learned_person_encoding = face_recognition.face_encodings(learned_person, face_locations)[0]
+identified_face_encodings.append(learned_person_encoding)
+identified_face_names.append(name)
+
+
+recomendations = dict()
+recomendations["Kostylev Ivan"] = ["шоколад", "вода 0.5л",  "яйца",  "сок 1л",  "сухарики",  "мороженое" ]
+recomendations["Vorkov Nikita"] = ["мороженое", "сок 1л",  "яйца", "леденец",  "сухарики", "чипсы"  ]
+recomendations["Bondarenko Andrey"] = ["яйца", "сок 1л",  "яйца",  "мороженое",  "чипсы",  "мороженое" ]
+recomendations["Sulimenko Nikita"] = ["мандарины", "леденец",  "яйца",  "чипсы",  "сухарики",  "чипсы" ]
+recomendations["Popov Alexander"] = ["леденец", "шоколад",  "яйца",  "сок 1л",  "сухарики",  "мороженое" ]
+recomendations["Karatetskaya Maria"] = ["шоколад", "вода 0.5л",  "яйца",  "сок 1л",  "сухарики",  "мороженое" ]
+recomendations["Unknown Person"] = ["шоколад", "яйца",  "мороженое",  "сухарики",  "леденец",  "чипсы" ]
+
+carModels = dict()
+carModels["Kostylev Ivan"] = "Lada Priora"
+carModels["Vorkov Nikita"] = "Tesly CyperTrack"
+carModels["Bondarenko Andrey"] = "Tayoty Mark2"
+carModels["Sulimenko Nikita"] = "BMW X5"
+carModels["Popov Alexander"] = "Volkswagen Golf"
+carModels["Karatetskaya Maria"] = "without car"
+carModels["Unknown Person"] = "Porche 911"
+
+gasStation = dict()
+gasStation["Kostylev Ivan"] = 1
+gasStation["Vorkov Nikita"] = 2
+gasStation["Bondarenko Andrey"] = 3
+gasStation["Sulimenko Nikita"] = 4
+gasStation["Popov Alexander"] = 5
+gasStation["Karatetskaya Maria"] = 0
+gasStation["Unknown Person"] = 0
+
+indexes = dict()
+indexes["Kostylev Ivan"] = 13
+indexes["Vorkov Nikita"] = 2024
+indexes["Bondarenko Andrey"] = 69
+indexes["Sulimenko Nikita"] = 21
+indexes["Popov Alexander"] = 100
+indexes["Karatetskaya Maria"] = 7
+indexes["Unknown Person"] = 7
+
+sails = dict()
+sails["Kostylev Ivan"] = 5
+sails["Vorkov Nikita"] = 10
+sails["Bondarenko Andrey"] = 25
+sails["Sulimenko Nikita"] = 50
+sails["Popov Alexander"] = 30
+sails["Karatetskaya Maria"] = 15
+sails["Unknown Person"] = 15
 
 # Initialize some variables
 face_locations = []

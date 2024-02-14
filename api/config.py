@@ -10,6 +10,11 @@ class Settings(BaseModel):
     RM_USER: str = 'rmuser'
     RM_PASSWORD: str = 'rmpassword'
 
+    RM_HOST: str = 'localhost'
+    RM_PORT: int = 5672
+    RM_USER: str = 'guest'
+    RM_PASSWORD: str = 'guest'
+
     DB_HOST: str = 'localhost'
     DB_PORT: int = 5434
     DB_DATABASE: str = 'postgres'

@@ -15,8 +15,7 @@ queue_name = 'camera_to_server'
 routing_key = queue_name
 
 credentials = pika.PlainCredentials(username=settings.RM_USER, password=settings.RM_PASSWORD)
-connection = pika.BlockingConnection(
-    pika.ConnectionParameters(host=settings.RM_HOST, port=settings.RM_PORT, credentials=credentials))
+connection = pika.BlockingConnection( pika.ConnectionParameters(host=settings.RM_HOST, port=settings.RM_PORT, credentials=credentials))
 channel = connection.channel()
 channel.exchange_declare(exchange=exchanger_name, exchange_type='direct')
 channel.queue_declare(queue=queue_name)
