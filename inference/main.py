@@ -20,7 +20,6 @@ with open(paths.CONFIG_PATH, "r") as stream:
     except yaml.YAMLError as exc:
         print(exc)
 
-
 send_period_s = int(config['send_period_s'])
 # for worker in config['workers']:
 #     worker_id = int(worker['id'])
@@ -31,6 +30,5 @@ worker = config['workers'][0]
 worker_id = int(worker['id'])
 gst_stream = worker['gst_stream']
 cap = cv2.VideoCapture(gst_stream, cv2.CAP_GSTREAMER)
-
 predictor.try_detect_frame(worker_id, cap)
 print("cv detector was closed")

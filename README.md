@@ -17,10 +17,16 @@
 * `cd opencv-python`      
 * `git checkout origin/master`        
 * `git submodule update --recursive`      
-* `export ENABLE_CONTRIB=1`       
-* `export CMAKE_ARGS="-DWITH_GSTREAMER=ON"`       
+* `export ENABLE_CONTRIB=1`
+На устройстве без видеокарты:
+* `export CMAKE_ARGS="-DWITH_GSTREAMER=ON"`   
+На устройстве с видеокартой:
+* `export CMAKE_ARGS="-DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=/usr/local -DINSTALL_C_EXAMPLES=ON -DINSTALL_PYTHON_EXAMPLES=ON -DWITH_CUDA=ON -DWITH_CUBLAS=1 -DENABLE_FAST_MATH=1 -DCUDA_FAST_MATH=1 -DWITH_CUDNN=ON -DOPENCV_DNN_CUDA=ON -DWITH_GSTREAMER=ON -DWITH_GSTREAMER_0_10=OFF -DBUILD_EXAMPLES=ON"`
 * `python3 -m pip wheel . --verbose`      
-* `python3 -m pip install opencv_*.whl`       
+* `python3 -m pip install opencv_*.whl`    
+
+Чтобы детекция лица заработала на видеокарте необходимо собрать библиотеку dlib под cuda:
+cmake .. -DDLIB_USE_CUDA=1 -DUSE_AVX_INSTRUCTIONS=1
 
 ### Description
 

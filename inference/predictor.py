@@ -20,10 +20,18 @@ def to_grayscale_then_rgb(image):
     image = tf.image.grayscale_to_rgb(image)
     return image
 
-def resize_image(image, top, right, bottom, left):
-    new_left, new_top, new_right, new_bottom = left, top, right, bottom
-    width = right - left
-    height = bottom - top
+def resize_image(image, left, top, right, bottom):
+    print(left, top, right, bottom)
+
+    img_height, img_width, _ = image.shape
+    height, width = bottom - top, right - left
+
+    print(width, height)
+    SIZE_COEFF = 0.4
+    new_left = left-SIZE_COEFF*width if left-SIZE_COEFF*width >= 0 else 0
+    new_right = right+SIZE_COEFF*width if right+SIZE_COEFF*width <= img_width else img_width
+    new_top = top-SIZE_COEFF*height if top-SIZE_COEFF*height >= 0 else 0
+    new_bottom = bottom+SIZE_COEFF*height if bottom+SIZE_COEFF*height <= img_height else img_height
 
     if height > width:  # если изображение вытянуто по вертикали - нужно добавить ширину
         diff_size = height - width
@@ -52,8 +60,8 @@ def resize_image(image, top, right, bottom, left):
             new_top = top - diff_size / 2
             new_bottom = bottom + diff_size / 2
 
-    image_cropped = image[int(new_top):int(new_bottom), int(new_left):int(new_right)]
-    return image_cropped
+    image = image[int(new_top):int(new_bottom), int(new_left):int(new_right)]
+    return image
 
 def process_image(image_resized):
     image_resized =  Image.fromarray(image_resized)
@@ -83,7 +91,13 @@ def predict_image(image_processed, model_age, model_gen, model_rac, model_emo):
     return age, gender, race, emotion
 
 def identify(image):
+    # ToDo гспд уберите кто-нибудь этот костыль
+    cv2.imwrite("image.jpeg", image)
+    image = face_recognition.load_image_file("image.jpeg")
+
     face_locations = face_recognition.face_locations(image)
+    print("face locations: ", str(face_locations))
+
     face_encodings = face_recognition.face_encodings(image, face_locations)
 
     face_names = []
@@ -113,6 +127,7 @@ def try_detect_frame(worker_id: int, cap: any):
 
         start = datetime.datetime.now()
         is_frame, image = cap.read()
+        print("time cap:", str((datetime.datetime.now() - start).total_seconds()))
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 
@@ -121,30 +136,47 @@ def try_detect_frame(worker_id: int, cap: any):
             continue
 
         # PERSON DETECTION
-        results = modelYolo.track(image, persist=True, tracker="../cfg/bytetrack.yaml") # Детектим людей целиком (не только лица)
-        if len(results) != 0 and results[0].boxes.id != None: # Если нет людей в кадре, то переходим к захвату следующего кадра
+        # personsList = model_person.predict(image) # Детектим людей целиком чтобы не терять их при отворачивании лица
+        # print("time person:", str((datetime.datetime.now() - start).total_seconds()))
 
-            # Идентификация
-            face_locations, face_encodings, face_names = identify(image)
+        facesList = model_face.predict(image) # Детектим людей целиком чтобы не терять их при отворачивании лица
+        print("time face:", str((datetime.datetime.now() - start).total_seconds()))
+        for i, person in enumerate(facesList):
+            person_coords = person.boxes[0].xyxy.tolist()[0]
+            left, top, right, bottom = int(person_coords[0]), int(person_coords[1]), int(person_coords[2]), int(person_coords[3])
+            print(left, top, right, bottom)
+            # Добавление пикселей вокруг изображения до квадрата (потому что обучали на квадратных изображениях)
+            image_resized = resize_image(image, left, top, right, bottom)
+            print("time image_resized:", str((datetime.datetime.now() - start).total_seconds()))
 
-            for i, ((top, right, bottom, left), name) in enumerate(zip(face_locations, face_names)):
-                cv2.rectangle(image, (left, top), (right, bottom), color=(230, 230, 230), thickness=10) # Рисуем рамку вокруг лица
-                cv2.putText(image, name, (left + 6, bottom - 6), cv2.FONT_HERSHEY_DUPLEX, 2.0, (255, 0, 0), 2) # Подписываем имя
+            # Идентификация на обрезанном изображении
+            face_locations, face_encodings, face_names = identify(image_resized)
+            if len(face_names) == 0:
+                continue
+            name = face_names[0]
+            print("time ident:", str((datetime.datetime.now() - start).total_seconds()))
 
-                # prediction making
-                image_resized = resize_image(image, top, right, bottom, left)
-                image_processed = process_image(image_resized)
-                pred_age, pred_gen, pred_rac, pred_emo = predict_image(image_processed,  model_age, model_gen, model_rac, model_emo)
+            # Нормалиация изображения к тому виду на котором обучали
+            image_processed = process_image(image_resized)
+            print("time image_processed:", str((datetime.datetime.now() - start).total_seconds()))
 
-                # debug labeling
-                label_age = "age: {}".format(pred_age)
-                draw_label(image, (i*400, image.shape[0]-30), label_age)
-                label_gender = "sex: {}".format(pred_gen)
-                draw_label(image, (i*400, image.shape[0]-60), label_gender)
-                label_race = "race: {}".format(pred_rac)
-                draw_label(image, (i*400, image.shape[0]-90), label_race)
-                label_emotion = "emotion: {}".format(pred_emo)
-                draw_label(image, (i*400, image.shape[0]-120), label_emotion)
+            # Предсказание визуальных параметров
+            pred_age, pred_gen, pred_rac, pred_emo = predict_image(image_processed,  model_age, model_gen, model_rac, model_emo)
+            print("time predicted:", str((datetime.datetime.now() - start).total_seconds()))
+
+            # Дебажная визуальная информация для отладки
+            cv2.rectangle(image, (left, top), (right, bottom), color=(230, 230, 230), thickness=10) # Рисуем рамку вокруг лица
+            cv2.putText(image, name, (left + 6, bottom - 6), cv2.FONT_HERSHEY_DUPLEX, 2.0, (255, 0, 0), 2) # Подписываем имя
+
+            label_age = "age: {}".format(pred_age)
+            draw_label(image, (i*400, image.shape[0]-30), label_age)
+            label_gender = "sex: {}".format(pred_gen)
+            draw_label(image, (i*400, image.shape[0]-60), label_gender)
+            label_race = "race: {}".format(pred_rac)
+            draw_label(image, (i*400, image.shape[0]-90), label_race)
+            label_emotion = "emotion: {}".format(pred_emo)
+            draw_label(image, (i*400, image.shape[0]-120), label_emotion)
+            print("time drowing:", str((datetime.datetime.now() - start).total_seconds()))
 
         end = datetime.datetime.now()
         fps = f"FPS: {1 / (end - start).total_seconds():.2f}"
@@ -160,24 +192,37 @@ transform = transforms.Compose([
     transforms.Normalize((0.5,), (0.5,))
 ])
 
-modelYolo = YOLO('../models/yolov8n.pt')
-tracker = DeepSort(max_age=50)
+print("Models initialization:")
+model_person = YOLO('../models/yolov8n.pt')
+model_person.to("cuda")
+print("Person model initialized")
+
+model_face = YOLO('../models/yolov8n-face.pt')
+model_person.to("cuda")
+print("Face model initialized")
+
+# tracker = DeepSort(max_age=50) ## ToDo начала падать. нужно разобраться почему
+print("DeepSort tracker have initialized")
 
 model_age = models.AgeEstimatorModel()
-model_age.load_state_dict(torch.load("../models/age_model_weights.pth"))
+model_age.load_state_dict(torch.load("../models/age_model_weights.pth", map_location=device))
 model_age.eval()
+print("Age model have initialized")
 
 model_gen = models.SexEstimatorModel()
-model_gen.load_state_dict(torch.load("../models/sex_model_weights.pth"))
+model_gen.load_state_dict(torch.load("../models/sex_model_weights.pth", map_location=device))
 model_gen.eval()
+print("Gender model have initialized")
 
 model_rac = models.RaceEstimatorModel(5)
-model_rac.load_state_dict(torch.load("../models/race_model_weights.pth"))
+model_rac.load_state_dict(torch.load("../models/race_model_weights.pth", map_location=device))
 model_rac.eval()
+print("Race model have initialized")
 
 model_emo = models.EmotionBinEstimatorModel(3)
-model_emo.load_state_dict(torch.load("../models/emotion_bin_model_weights.pth"))
+model_emo.load_state_dict(torch.load("../models/emotion_bin_model_weights.pth", map_location=device))
 model_emo.eval()
+print("Emotion model have initialized")
 
 identified_face_encodings = []
 identified_face_names = []
