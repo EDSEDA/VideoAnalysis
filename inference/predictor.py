@@ -96,14 +96,7 @@ def predict_image(image_processed, model_age, model_gen, model_rac, model_emo):
     return age, gender, race, emotion
 
 def identify(image):
-    # ToDo гспд уберите кто-нибудь этот костыль
-    cv2.imwrite("image.jpeg", image)
-    image = face_recognition.load_image_file("image.jpeg")
-
-    face_locations = face_recognition.face_locations(image)
-    print("face locations: ", str(face_locations))
-
-    face_encodings = face_recognition.face_encodings(image, face_locations)
+    face_encodings = face_recognition.face_encodings(image.copy())
 
     face_names = []
     for face_encoding in face_encodings:  # Перебираем все эмбеддинги с кадра и ищем в истории похожие эмбединги
@@ -113,13 +106,16 @@ def identify(image):
         if True in matches:
             first_match_index = matches.index(True)
             name = identified_face_names[first_match_index]
-        else:  # Если человек не был идентицицирован ранее, то добавляем его в список идентифицированных
+        else:  # Если человек не был идентицицирован ранее, то добавляем его в список идентифицированных как нового
             identified_face_encodings.append(face_encoding)
             identified_face_names.append(name)
 
         face_names.append(name)
 
     return face_locations, face_encodings, face_names
+
+def find_area(left, top, right, bottom):
+    return abs((right - left) * (bottom - top))
 
 def draw_label(image, point, label, font=cv2.FONT_HERSHEY_SIMPLEX, font_scale=0.4, thickness=1):
     size = cv2.getTextSize(label, font, font_scale, thickness)[0]
@@ -141,92 +137,101 @@ def try_detect_frame(worker_id: int, cap: any):
             continue
 
         # PERSON DETECTION
-        # personsList = model_person.predict(image) # Детектим людей целиком чтобы не терять их при отворачивании лица
-        # print("time person:", str((datetime.datetime.now() - start).total_seconds()))
-        image = cv2.resize(image, (0, 0), fx=0.25, fy=0.25)
-        facesList = model_face.predict(image) # Детектим людей целиком чтобы не терять их при отворачивании лица
-        print("time face:", str((datetime.datetime.now() - start).total_seconds()))
-        for i, person in enumerate(facesList):
-            person_coords = person.boxes[0].xyxy.tolist()[0]
-            left, top, right, bottom = int(person_coords[0]), int(person_coords[1]), int(person_coords[2]), int(person_coords[3])
-            print(left, top, right, bottom)
-            # Добавление пикселей вокруг изображения до квадрата (потому что обучали на квадратных изображениях)
-            image_resized = resize_image(image, left, top, right, bottom)
-            print("time image_resized:", str((datetime.datetime.now() - start).total_seconds()))
+        image = cv2.resize(image, (0, 0), fx=0.50, fy=0.50)
+        facesList = model_face.predict(image)
+        print("time face finding:", str((datetime.datetime.now() - start).total_seconds()))
 
-            # Идентификация на обрезанном изображении
-            face_locations, face_encodings, face_names = identify(image_resized)
-            if len(face_names) == 0:
-                time.sleep(0.1)
-                continue
-            name = face_names[0]
+        detected_faces = [] # left, top, right, bottom
+        for person in facesList:
+            person_coords = person.boxes[0].xyxy.tolist()[0] # todo разобраться когда boxes не имеет значений
+            coords = int(person_coords[0]), int(person_coords[1]), int(person_coords[2]), int(person_coords[3])
+            detected_faces.append(coords)
 
-            names[last_val_iterator["general"]] = name
-            last_val_iterator["general"] += 1
-            if last_val_iterator["general"] == 10:
-                last_val_iterator["general"] = 0
-                full_flag["general"] = True
+        max_area = 0
+        face_left, face_top, face_right, face_bottom = 0, 0, 0, 0
+        for coords in detected_faces: # Поиск максимального по площади лица
+            area = find_area(coords[0], coords[1], coords[2], coords[3])
+            if max_area < area:
+                max_area = area
+                face_left, face_top, face_right, face_bottom = coords[0], coords[1], coords[2], coords[3]
 
-            max_val_name = 10 if full_flag["general"] else last_val_iterator["general"]
-            name = mode(names[0:max_val_name])
-            print("time ident:", str((datetime.datetime.now() - start).total_seconds()))
+        # Добавление пикселей вокруг изображения до квадрата (потому что обучали на квадратных изображениях)
+        image_resized = resize_image(image, face_left, face_top, face_right, face_bottom)
+        print("time image_resized:", str((datetime.datetime.now() - start).total_seconds()))
 
-            # Нормалиация изображения к тому виду на котором обучали
-            image_processed = process_image(image_resized)
-            print("time image_processed:", str((datetime.datetime.now() - start).total_seconds()))
+        # Идентификация на обрезанном изображении
+        face_locations, face_encodings, face_names = identify(image_resized)
+        if len(face_names) != 1: # Не должно быть такого, что на данном этапе не определилиникого на фото. Мы уже прежде убедились что человек там есть
+            continue
 
-            # Предсказание визуальных параметров
-            pred_age, pred_gen, pred_rac, pred_emo = predict_image(image_processed,  model_age, model_gen, model_rac, model_emo)
-            print("time predicted:", str((datetime.datetime.now() - start).total_seconds()))
+        face_name = face_names[0]
+        print("time ident:", str((datetime.datetime.now() - start).total_seconds()))
 
-            age_last_values[name][last_val_iterator[name]] = pred_age
-            sex_last_values[name][last_val_iterator[name]] = pred_gen
-            race_last_values[name][last_val_iterator[name]] = pred_rac
-            emotion_last_values[name][last_val_iterator[name]] = pred_emo
-            last_val_iterator[name] += 1
-            if last_val_iterator[name] == 50:
-                last_val_iterator[name] = 0
-                full_flag[name] = True
 
-            print(last_val_iterator[name])
-            # Дебажная визуальная информация для отладки
-            cv2.rectangle(image, (left, top), (right, bottom), color=(230, 230, 230), thickness=1) # Рисуем рамку вокруг лица
-            cv2.putText(image, name, (left - 30, bottom - 4), cv2.FONT_HERSHEY_DUPLEX, 0.5, (255, 0, 0), 1) # Подписываем имя
+        names[last_val_iterator["general"]] = face_name
+        last_val_iterator["general"] += 1
+        if last_val_iterator["general"] == 10:
+            last_val_iterator["general"] = 0
+            full_flag["general"] = True
 
-            max_val = 50 if full_flag[name] else last_val_iterator[name]
+        max_val_name = 10 if full_flag["general"] else last_val_iterator["general"]
+        name = mode(names[0:max_val_name])
 
-            mean_age = mean(age_last_values[name][0:max_val])
-            label_age = "age: {}".format(int(mean_age))
-            draw_label(image, (i*400, image.shape[0]-15), label_age)
+        # Нормалиация изображения к тому виду на котором обучали
+        image_processed = process_image(image_resized)
+        print("time image_processed:", str((datetime.datetime.now() - start).total_seconds()))
 
-            mean_gen = mode(sex_last_values[name][0:max_val])
-            label_gender = "sex: {}".format(GENDER_LABELS[int(mean_gen)])
-            draw_label(image, (i*400, image.shape[0]-30), label_gender)
+        # Предсказание визуальных параметров
+        pred_age, pred_gen, pred_rac, pred_emo = predict_image(image_processed,  model_age, model_gen, model_rac, model_emo)
+        print("time predicted:", str((datetime.datetime.now() - start).total_seconds()))
 
-            mean_race = mode(race_last_values[name][0:max_val])
-            label_race = "race: {}".format(RACES_LABELS[int(mean_race * 0.5)])
-            draw_label(image, (i*400, image.shape[0]-45), label_race)
+        age_last_values[name][last_val_iterator[name]] = pred_age
+        sex_last_values[name][last_val_iterator[name]] = pred_gen
+        race_last_values[name][last_val_iterator[name]] = pred_rac
+        emotion_last_values[name][last_val_iterator[name]] = pred_emo
+        last_val_iterator[name] += 1
+        if last_val_iterator[name] == ACCUMULATION_COUNT:
+            last_val_iterator[name] = 0
+            full_flag[name] = True
 
-            mean_emotion = mode(emotion_last_values[name][0:max_val])
-            label_emotion = "emotion: {}".format(EMOTION_LABELS_BIN[int(mean_emotion)])
-            draw_label(image, (i*400, image.shape[0]-60), label_emotion)
+        # Дебажная визуальная информация для отладки
+        cv2.rectangle(image, (face_left, face_top), (face_right, face_bottom), color=(230, 230, 230), thickness=1) # Рисуем рамку вокруг лица
+        cv2.putText(image, name, (face_left - 30, face_bottom - 4), cv2.FONT_HERSHEY_DUPLEX, 0.5, (255, 0, 0), 1) # Подписываем имя
 
-            print("time drowing:", str((datetime.datetime.now() - start).total_seconds()))
+        max_val = ACCUMULATION_COUNT if full_flag[name] else last_val_iterator[name]
 
-            worker = dict()
-            worker["name"] = kostyName[name]
-            worker["carModels"] = carModels[name]
-            worker["gasStation"] = gasStation[name]
-            worker["indexes"] = indexes[name]
-            worker["sails"] = sails[name]
-            worker["recommendations"] = recomendations[name]
-            mq_send(json.dumps(worker))
+        mean_age = mean(age_last_values[name][0:max_val])
+        label_age = "age: {}".format(int(mean_age))
+        draw_label(image, (0, image.shape[0]-15), label_age)
+
+        mean_gen = mode(sex_last_values[name][0:max_val])
+        label_gender = "sex: {}".format(GENDER_LABELS[int(mean_gen)])
+        draw_label(image, (0, image.shape[0]-30), label_gender)
+
+        mean_race = mode(race_last_values[name][0:max_val])
+        label_race = "race: {}".format(RACES_LABELS[int(mean_race * 0.5)])
+        draw_label(image, (0, image.shape[0]-45), label_race)
+
+        mean_emotion = mode(emotion_last_values[name][0:max_val])
+        label_emotion = "emotion: {}".format(EMOTION_LABELS_BIN[int(mean_emotion)])
+        draw_label(image, (0, image.shape[0]-60), label_emotion)
+
+        print("time drowing:", str((datetime.datetime.now() - start).total_seconds()))
+
+        worker = dict()
+        worker["name"] = kostyName[name]
+        worker["carModels"] = carModels[name]
+        worker["gasStation"] = gasStation[name]
+        worker["indexes"] = indexes[name]
+        worker["sails"] = sails[name]
+        worker["recommendations"] = recomendations[name]
+        mq_send(json.dumps(worker))
 
         end = datetime.datetime.now()
         label_fps = f"FPS: {1 / (end - start).total_seconds():.2f}"
         draw_label(image, (0, image.shape[0] - 75), label_fps)
 
-        image = cv2.resize(image, (0, 0), fx=4, fy=4)
+        image = cv2.resize(image, (0, 0), fx=2, fy=2)
         cv2.imshow("YOLOv8 Tracking", image)
         if cv2.waitKey(10) & 0xFF == ord('q'):
             break
@@ -235,6 +240,7 @@ def try_detect_frame(worker_id: int, cap: any):
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
+ACCUMULATION_COUNT= 50
 SIZE = 48
 transform = transforms.Compose([
     transforms.Resize((SIZE, SIZE)),
