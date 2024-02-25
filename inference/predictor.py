@@ -2,6 +2,7 @@ import datetime
 import json
 import time
 from collections import defaultdict
+from statistics import mode, mean
 
 import numpy as np
 from PIL import Image
@@ -16,7 +17,7 @@ import face_recognition
 from api.config import EMOTION_LABELS, EMOTION_LABELS_BIN, GENDER_LABELS, RACES_LABELS
 import models
 from api.rabbit import mq_send
-
+from storage import *
 
 
 def to_grayscale_then_rgb(image):
@@ -80,17 +81,17 @@ def predict_image(image_processed, model_age, model_gen, model_rac, model_emo):
         age = int(output.item())
 
         output = model_gen(image_processed)
-        gender = GENDER_LABELS[int(output.round().item())]
+        gender = int(output.round().item())
 
         output = model_rac(image_processed)
         _, predicted = torch.max(output, 1)
-        race = RACES_LABELS[predicted.item()]
+        race = predicted.item()
 
         transform = transforms.Compose([transforms.Grayscale(num_output_channels=1)])
         image_processed_emo = transform(image_processed)
         output = model_emo(image_processed_emo)
         _, predicted = torch.max(output, 1)
-        emotion = EMOTION_LABELS_BIN[predicted.item()]
+        emotion = predicted.item()
 
     return age, gender, race, emotion
 
@@ -106,7 +107,7 @@ def identify(image):
 
     face_names = []
     for face_encoding in face_encodings:  # Перебираем все эмбеддинги с кадра и ищем в истории похожие эмбединги
-        matches = face_recognition.compare_faces(identified_face_encodings, face_encoding, tolerance=0.66)  # За настройку определения похожих эмбедингов отвечает коэффициент tolerance
+        matches = face_recognition.compare_faces(identified_face_encodings, face_encoding, tolerance=0.57)  # За настройку определения похожих эмбедингов отвечает коэффициент tolerance
         name = "Unknown Person"
 
         if True in matches:
@@ -120,7 +121,7 @@ def identify(image):
 
     return face_locations, face_encodings, face_names
 
-def draw_label(image, point, label, font=cv2.FONT_HERSHEY_SIMPLEX, font_scale=1.2, thickness=1):
+def draw_label(image, point, label, font=cv2.FONT_HERSHEY_SIMPLEX, font_scale=0.4, thickness=1):
     size = cv2.getTextSize(label, font, font_scale, thickness)[0]
     x, y = point
     cv2.rectangle(image, (x, y - size[1]), (x + size[0], y), (255, 0, 0), cv2.FILLED)
@@ -132,17 +133,17 @@ def try_detect_frame(worker_id: int, cap: any):
         start = datetime.datetime.now()
         is_frame, image = cap.read()
         print("time cap:", str((datetime.datetime.now() - start).total_seconds()))
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
 
         if is_frame == False:
             print("no frame")
+            if cv2.waitKey(10) & 0xFF == ord('q'):
+                break
             continue
 
         # PERSON DETECTION
         # personsList = model_person.predict(image) # Детектим людей целиком чтобы не терять их при отворачивании лица
         # print("time person:", str((datetime.datetime.now() - start).total_seconds()))
-
+        image = cv2.resize(image, (0, 0), fx=0.25, fy=0.25)
         facesList = model_face.predict(image) # Детектим людей целиком чтобы не терять их при отворачивании лица
         print("time face:", str((datetime.datetime.now() - start).total_seconds()))
         for i, person in enumerate(facesList):
@@ -156,8 +157,18 @@ def try_detect_frame(worker_id: int, cap: any):
             # Идентификация на обрезанном изображении
             face_locations, face_encodings, face_names = identify(image_resized)
             if len(face_names) == 0:
+                time.sleep(0.1)
                 continue
             name = face_names[0]
+
+            names[last_val_iterator["general"]] = name
+            last_val_iterator["general"] += 1
+            if last_val_iterator["general"] == 10:
+                last_val_iterator["general"] = 0
+                full_flag["general"] = True
+
+            max_val_name = 10 if full_flag["general"] else last_val_iterator["general"]
+            name = mode(names[0:max_val_name])
             print("time ident:", str((datetime.datetime.now() - start).total_seconds()))
 
             # Нормалиация изображения к тому виду на котором обучали
@@ -168,34 +179,57 @@ def try_detect_frame(worker_id: int, cap: any):
             pred_age, pred_gen, pred_rac, pred_emo = predict_image(image_processed,  model_age, model_gen, model_rac, model_emo)
             print("time predicted:", str((datetime.datetime.now() - start).total_seconds()))
 
-            # Дебажная визуальная информация для отладки
-            cv2.rectangle(image, (left, top), (right, bottom), color=(230, 230, 230), thickness=10) # Рисуем рамку вокруг лица
-            cv2.putText(image, name, (left + 6, bottom - 6), cv2.FONT_HERSHEY_DUPLEX, 2.0, (255, 0, 0), 2) # Подписываем имя
+            age_last_values[name][last_val_iterator[name]] = pred_age
+            sex_last_values[name][last_val_iterator[name]] = pred_gen
+            race_last_values[name][last_val_iterator[name]] = pred_rac
+            emotion_last_values[name][last_val_iterator[name]] = pred_emo
+            last_val_iterator[name] += 1
+            if last_val_iterator[name] == 50:
+                last_val_iterator[name] = 0
+                full_flag[name] = True
 
-            label_age = "age: {}".format(pred_age)
-            draw_label(image, (i*400, image.shape[0]-30), label_age)
-            label_gender = "sex: {}".format(pred_gen)
-            draw_label(image, (i*400, image.shape[0]-60), label_gender)
-            label_race = "race: {}".format(pred_rac)
-            draw_label(image, (i*400, image.shape[0]-90), label_race)
-            label_emotion = "emotion: {}".format(pred_emo)
-            draw_label(image, (i*400, image.shape[0]-120), label_emotion)
+            print(last_val_iterator[name])
+            # Дебажная визуальная информация для отладки
+            cv2.rectangle(image, (left, top), (right, bottom), color=(230, 230, 230), thickness=1) # Рисуем рамку вокруг лица
+            cv2.putText(image, name, (left - 30, bottom - 4), cv2.FONT_HERSHEY_DUPLEX, 0.5, (255, 0, 0), 1) # Подписываем имя
+
+            max_val = 50 if full_flag[name] else last_val_iterator[name]
+
+            mean_age = mean(age_last_values[name][0:max_val])
+            label_age = "age: {}".format(int(mean_age))
+            draw_label(image, (i*400, image.shape[0]-15), label_age)
+
+            mean_gen = mode(sex_last_values[name][0:max_val])
+            label_gender = "sex: {}".format(GENDER_LABELS[int(mean_gen)])
+            draw_label(image, (i*400, image.shape[0]-30), label_gender)
+
+            mean_race = mode(race_last_values[name][0:max_val])
+            label_race = "race: {}".format(RACES_LABELS[int(mean_race * 0.5)])
+            draw_label(image, (i*400, image.shape[0]-45), label_race)
+
+            mean_emotion = mode(emotion_last_values[name][0:max_val])
+            label_emotion = "emotion: {}".format(EMOTION_LABELS_BIN[int(mean_emotion)])
+            draw_label(image, (i*400, image.shape[0]-60), label_emotion)
+
             print("time drowing:", str((datetime.datetime.now() - start).total_seconds()))
 
             worker = dict()
-            worker["name"] = name
+            worker["name"] = kostyName[name]
             worker["carModels"] = carModels[name]
             worker["gasStation"] = gasStation[name]
             worker["indexes"] = indexes[name]
             worker["sails"] = sails[name]
-            worker["recomendations"] = recomendations[name]
+            worker["recommendations"] = recomendations[name]
             mq_send(json.dumps(worker))
 
         end = datetime.datetime.now()
-        fps = f"FPS: {1 / (end - start).total_seconds():.2f}"
-        cv2.putText(image, fps, (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 255, 255), 4)
-        cv2.imshow("YOLOv8 Tracking", image)
+        label_fps = f"FPS: {1 / (end - start).total_seconds():.2f}"
+        draw_label(image, (0, image.shape[0] - 75), label_fps)
 
+        image = cv2.resize(image, (0, 0), fx=4, fy=4)
+        cv2.imshow("YOLOv8 Tracking", image)
+        if cv2.waitKey(10) & 0xFF == ord('q'):
+            break
 
 
 
@@ -240,98 +274,3 @@ model_emo.load_state_dict(torch.load("../models/emotion_bin_model_weights.pth", 
 model_emo.eval()
 print("Emotion model have initialized")
 
-identified_face_encodings = []
-identified_face_names = []
-
-name = "Kostylev Ivan"
-learned_person = face_recognition.load_image_file("../learning/data/face_recognition_images/person1.1.jpg")
-face_locations = face_recognition.face_locations(learned_person)
-learned_person_encoding = face_recognition.face_encodings(learned_person, face_locations)[0]
-identified_face_encodings.append(learned_person_encoding)
-identified_face_names.append(name)
-
-name = "Vorkov Nikita"
-learned_person = face_recognition.load_image_file("../learning/data/face_recognition_images/person2.1.jpg")
-face_locations = face_recognition.face_locations(learned_person)
-learned_person_encoding = face_recognition.face_encodings(learned_person, face_locations)[0]
-identified_face_encodings.append(learned_person_encoding)
-identified_face_names.append(name)
-
-name = "Bondarenko Andrey"
-learned_person = face_recognition.load_image_file("../learning/data/face_recognition_images/person2.1.jpg")
-face_locations = face_recognition.face_locations(learned_person)
-learned_person_encoding = face_recognition.face_encodings(learned_person, face_locations)[0]
-identified_face_encodings.append(learned_person_encoding)
-identified_face_names.append(name)
-
-name = "Sulimenko Nikita"
-learned_person = face_recognition.load_image_file("../learning/data/face_recognition_images/person4.1.jpg")
-face_locations = face_recognition.face_locations(learned_person)
-learned_person_encoding = face_recognition.face_encodings(learned_person, face_locations)[0]
-identified_face_encodings.append(learned_person_encoding)
-identified_face_names.append(name)
-
-name = "Popov Alexander"
-learned_person = face_recognition.load_image_file("../learning/data/face_recognition_images/person5.1.jpg")
-face_locations = face_recognition.face_locations(learned_person)
-learned_person_encoding = face_recognition.face_encodings(learned_person, face_locations)[0]
-identified_face_encodings.append(learned_person_encoding)
-identified_face_names.append(name)
-
-name = "Karatetskaya Maria"
-learned_person = face_recognition.load_image_file("../learning/data/face_recognition_images/person6.1.jpg")
-face_locations = face_recognition.face_locations(learned_person)
-learned_person_encoding = face_recognition.face_encodings(learned_person, face_locations)[0]
-identified_face_encodings.append(learned_person_encoding)
-identified_face_names.append(name)
-
-
-recomendations = dict()
-recomendations["Kostylev Ivan"] = ["шоколад", "вода 0.5л",  "яйца",  "сок 1л",  "сухарики",  "мороженое" ]
-recomendations["Vorkov Nikita"] = ["мороженое", "сок 1л",  "яйца", "леденец",  "сухарики", "чипсы"  ]
-recomendations["Bondarenko Andrey"] = ["яйца", "сок 1л",  "яйца",  "мороженое",  "чипсы",  "мороженое" ]
-recomendations["Sulimenko Nikita"] = ["мандарины", "леденец",  "яйца",  "чипсы",  "сухарики",  "чипсы" ]
-recomendations["Popov Alexander"] = ["леденец", "шоколад",  "яйца",  "сок 1л",  "сухарики",  "мороженое" ]
-recomendations["Karatetskaya Maria"] = ["шоколад", "вода 0.5л",  "яйца",  "сок 1л",  "сухарики",  "мороженое" ]
-recomendations["Unknown Person"] = ["шоколад", "яйца",  "мороженое",  "сухарики",  "леденец",  "чипсы" ]
-
-carModels = dict()
-carModels["Kostylev Ivan"] = "Lada Priora"
-carModels["Vorkov Nikita"] = "Tesly CyperTrack"
-carModels["Bondarenko Andrey"] = "Tayoty Mark2"
-carModels["Sulimenko Nikita"] = "BMW X5"
-carModels["Popov Alexander"] = "Volkswagen Golf"
-carModels["Karatetskaya Maria"] = "without car"
-carModels["Unknown Person"] = "Porche 911"
-
-gasStation = dict()
-gasStation["Kostylev Ivan"] = 1
-gasStation["Vorkov Nikita"] = 2
-gasStation["Bondarenko Andrey"] = 3
-gasStation["Sulimenko Nikita"] = 4
-gasStation["Popov Alexander"] = 5
-gasStation["Karatetskaya Maria"] = 0
-gasStation["Unknown Person"] = 0
-
-indexes = dict()
-indexes["Kostylev Ivan"] = 13
-indexes["Vorkov Nikita"] = 2024
-indexes["Bondarenko Andrey"] = 69
-indexes["Sulimenko Nikita"] = 21
-indexes["Popov Alexander"] = 100
-indexes["Karatetskaya Maria"] = 7
-indexes["Unknown Person"] = 7
-
-sails = dict()
-sails["Kostylev Ivan"] = 5
-sails["Vorkov Nikita"] = 10
-sails["Bondarenko Andrey"] = 25
-sails["Sulimenko Nikita"] = 50
-sails["Popov Alexander"] = 30
-sails["Karatetskaya Maria"] = 15
-sails["Unknown Person"] = 15
-
-# Initialize some variables
-face_locations = []
-face_encodings = []
-face_names = []

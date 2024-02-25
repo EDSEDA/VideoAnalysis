@@ -29,6 +29,7 @@ send_period_s = int(config['send_period_s'])
 worker = config['workers'][0]
 worker_id = int(worker['id'])
 gst_stream = worker['gst_stream']
-cap = cv2.VideoCapture(gst_stream, cv2.CAP_GSTREAMER)
+cap = cv2.VideoCapture("/home/vorkov/Downloads/img-4877_MbdR4rmK (4).mp4")
 predictor.try_detect_frame(worker_id, cap)
+
 print("cv detector was closed")
