@@ -1,5 +1,3 @@
-send_period_s: 10
-workers:
-  - { id: 17, gst_stream: "rtspsrc location=rtsp://127.0.0.1:18554/test user-id=user user-pw=pass latency=0 ! rtpjitterbuffer drop-on-latency=true ! decodebin ! videoconvert ! appsink" }
-#  - { id: 16, video_driver_path: "rtsp://vorkov:vorkov@192.168.0.100:554/stream2" }
-#  - { id: 18, video_driver_path: "/dev/video1" }
+gst_stream: "rtspsrc location=rtsp://127.0.0.1:18554/test user-id=user user-pw=pass latency=0 ! rtpjitterbuffer drop-on-latency=true ! decodebin ! videoconvert ! appsink"
+kafka_addr: "127.0.0.1:9092"
+kafka_topic: "video_data"

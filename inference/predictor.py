@@ -4,21 +4,13 @@ import time
 from collections import defaultdict
 from statistics import mode, mean
 
-import numpy as np
 from PIL import Image
-from ultralytics import YOLO
 import cv2
 import tensorflow as tf
 from deep_sort_realtime.deepsort_tracker import DeepSort
-import torch
-from torchvision import transforms
 import face_recognition
 
-from api.config import EMOTION_LABELS, EMOTION_LABELS_BIN, GENDER_LABELS, RACES_LABELS
-import models
-from api.rabbit import mq_send
-from storage import *
-
+from init import *
 
 def to_grayscale_then_rgb(image):
     image = tf.image.rgb_to_grayscale(image)
@@ -26,12 +18,9 @@ def to_grayscale_then_rgb(image):
     return image
 
 def resize_image(image, left, top, right, bottom):
-    print(left, top, right, bottom)
-
     img_height, img_width, _ = image.shape
     height, width = bottom - top, right - left
 
-    print(width, height)
     SIZE_COEFF = 0.4
     new_left = left-SIZE_COEFF*width if left-SIZE_COEFF*width >= 0 else 0
     new_right = right+SIZE_COEFF*width if right+SIZE_COEFF*width <= img_width else img_width
@@ -96,23 +85,23 @@ def predict_image(image_processed, model_age, model_gen, model_rac, model_emo):
     return age, gender, race, emotion
 
 def identify(image):
-    face_encodings = face_recognition.face_encodings(image.copy())
+    face_embeddings = face_recognition.face_encodings(image.copy()) # тут происходит неявное запоминание лиц либой, если они прежде не были нам известны
 
-    face_names = []
-    for face_encoding in face_encodings:  # Перебираем все эмбеддинги с кадра и ищем в истории похожие эмбединги
-        matches = face_recognition.compare_faces(identified_face_encodings, face_encoding, tolerance=0.57)  # За настройку определения похожих эмбедингов отвечает коэффициент tolerance
-        name = "Unknown Person"
+    person_ids = []
+    for face_embedding in face_embeddings:  # Перебираем все эмбеддинги с кадра и ищем в истории похожие эмбединги
+        matches = face_recognition.compare_faces(identified_face_embeddings, face_embedding, tolerance=0.57)  # За настройку определения похожих эмбедингов отвечает коэффициент tolerance
+        name_id = int(time.time() * 10e6)
 
-        if True in matches:
-            first_match_index = matches.index(True)
-            name = identified_face_names[first_match_index]
+        if False in matches:
+            identified_face_embeddings.append(face_embedding)
+            identified_person_ids.append(name_id)
         else:  # Если человек не был идентицицирован ранее, то добавляем его в список идентифицированных как нового
-            identified_face_encodings.append(face_encoding)
-            identified_face_names.append(name)
+            first_match_index = matches.index(True)
+            name_id = identified_person_ids[first_match_index]
 
-        face_names.append(name)
+        person_ids.append(name_id)
 
-    return face_locations, face_encodings, face_names
+    return face_embeddings, person_ids
 
 def find_area(left, top, right, bottom):
     return abs((right - left) * (bottom - top))
@@ -123,23 +112,30 @@ def draw_label(image, point, label, font=cv2.FONT_HERSHEY_SIMPLEX, font_scale=0.
     cv2.rectangle(image, (x, y - size[1]), (x + size[0], y), (255, 0, 0), cv2.FILLED)
     cv2.putText(image, label, point, font, font_scale, (255, 255, 255), thickness, lineType=cv2.LINE_AA)
 
-def try_detect_frame(worker_id: int, cap: any):
+def try_detect_frame(cap):
     while (True):
+
+        # ПРИЕМ ВИДЕО
+        if cv2.waitKey(10) & 0xFF == ord('q'):
+            break
 
         start = datetime.datetime.now()
         is_frame, image = cap.read()
-        print("time cap:", str((datetime.datetime.now() - start).total_seconds()))
 
         if is_frame == False:
             print("no frame")
-            if cv2.waitKey(10) & 0xFF == ord('q'):
-                break
             continue
 
-        # PERSON DETECTION
-        image = cv2.resize(image, (0, 0), fx=0.50, fy=0.50)
-        facesList = model_face.predict(image)
-        print("time face finding:", str((datetime.datetime.now() - start).total_seconds()))
+
+
+        # ДЕТКЦИЯ
+        image = cv2.resize(image, (0, 0), fx=0.50, fy=0.50) # ужимаем изображение чтобы быстрее его обрабатывать
+        facesList = model_face.predict(image) # ищем людей на изображении
+
+        if len(facesList) == 0: # если из кадра пропали все, то сбрасываем текущего человека
+            identified_person_frames_counter = 0
+            cv2.imshow("YOLOv8 Tracking", image)
+            continue
 
         detected_faces = [] # left, top, right, bottom
         for person in facesList:
@@ -157,126 +153,69 @@ def try_detect_frame(worker_id: int, cap: any):
 
         # Добавление пикселей вокруг изображения до квадрата (потому что обучали на квадратных изображениях)
         image_resized = resize_image(image, face_left, face_top, face_right, face_bottom)
-        print("time image_resized:", str((datetime.datetime.now() - start).total_seconds()))
 
-        # Идентификация на обрезанном изображении
-        face_locations, face_encodings, face_names = identify(image_resized)
-        if len(face_names) != 1: # Не должно быть такого, что на данном этапе не определилиникого на фото. Мы уже прежде убедились что человек там есть
+
+
+        # ИДЕНТИФИКАЦИЯ
+        face_embeddings, person_ids = identify(image_resized)
+        if len(face_embeddings) != 1: # Не должно быть такого, что на данном этапе не определилиникого на фото. Мы уже прежде убедились что человек там есть
             continue
+        current_person_id = person_ids[0] # Даже если на камеру попало 2 лица, то берем просто первое из них
 
-        face_name = face_names[0]
-        print("time ident:", str((datetime.datetime.now() - start).total_seconds()))
+        identified_person_ids[identified_person_frames_counter % identified_required_person_frames] = current_person_id
+        identified_person_frames_count = identified_required_person_frames if (identified_person_frames_counter / identified_required_person_frames != 0) else identified_person_frames_counter % identified_required_person_frames
+        mode_person_id = mode(identified_person_ids[0:identified_person_frames_count]) # Получаем моду из айдишников последних n эмбеддингов
+
+        if mode_person_id != last_identified_person_id: # Если айди лица новый, то сбрасываем счетчик фреймов для прошлого человека
+            analyzed_person_frames_counter = 0
 
 
-        names[last_val_iterator["general"]] = face_name
-        last_val_iterator["general"] += 1
-        if last_val_iterator["general"] == 10:
-            last_val_iterator["general"] = 0
-            full_flag["general"] = True
 
-        max_val_name = 10 if full_flag["general"] else last_val_iterator["general"]
-        name = mode(names[0:max_val_name])
+        # АНАЛИЗ ВНЕШНИХ ПРИЗНАКОВ
+        image_processed = process_image(image_resized) # Нормалиация изображения к тому виду на котором обучали
+        pred_age, pred_sex, pred_rac, pred_emo = predict_image(image_processed,  model_age, model_gen, model_rac, model_emo) # Предсказание визуальных параметров
 
-        # Нормалиация изображения к тому виду на котором обучали
-        image_processed = process_image(image_resized)
-        print("time image_processed:", str((datetime.datetime.now() - start).total_seconds()))
+        age_last_values[analyzed_person_frames_counter % analyzed_required_person_frames] = pred_age
+        sex_last_values[analyzed_person_frames_counter % analyzed_required_person_frames] = pred_sex
+        rac_last_values[analyzed_person_frames_counter % analyzed_required_person_frames] = pred_rac
+        emo_last_values[analyzed_person_frames_counter % analyzed_required_person_frames] = pred_emo
+        analyzed_person_frames_count = analyzed_required_person_frames if (analyzed_person_frames_counter / analyzed_required_person_frames != 0) else analyzed_person_frames_counter % analyzed_required_person_frames
+        mean_age = mean(age_last_values[0:analyzed_person_frames_count]) # Получаем моду из айдишников последних n эмбеддингов
+        mean_sex = mode(sex_last_values[0:analyzed_person_frames_count])
+        mean_rac = mode(rac_last_values[0:analyzed_person_frames_count])
+        mean_emo = mode(emo_last_values[0:analyzed_person_frames_count])
 
-        # Предсказание визуальных параметров
-        pred_age, pred_gen, pred_rac, pred_emo = predict_image(image_processed,  model_age, model_gen, model_rac, model_emo)
-        print("time predicted:", str((datetime.datetime.now() - start).total_seconds()))
+        identified_person_frames_counter += 1
+        analyzed_person_frames_counter += 1
+        last_identified_person_id = current_person_id
 
-        age_last_values[name][last_val_iterator[name]] = pred_age
-        sex_last_values[name][last_val_iterator[name]] = pred_gen
-        race_last_values[name][last_val_iterator[name]] = pred_rac
-        emotion_last_values[name][last_val_iterator[name]] = pred_emo
-        last_val_iterator[name] += 1
-        if last_val_iterator[name] == ACCUMULATION_COUNT:
-            last_val_iterator[name] = 0
-            full_flag[name] = True
 
-        # Дебажная визуальная информация для отладки
-        cv2.rectangle(image, (face_left, face_top), (face_right, face_bottom), color=(230, 230, 230), thickness=1) # Рисуем рамку вокруг лица
-        cv2.putText(image, name, (face_left - 30, face_bottom - 4), cv2.FONT_HERSHEY_DUPLEX, 0.5, (255, 0, 0), 1) # Подписываем имя
 
-        max_val = ACCUMULATION_COUNT if full_flag[name] else last_val_iterator[name]
-
-        mean_age = mean(age_last_values[name][0:max_val])
+        # ВИЗУАЛИЗАЦИЯ (дебажная)
         label_age = "age: {}".format(int(mean_age))
         draw_label(image, (0, image.shape[0]-15), label_age)
-
-        mean_gen = mode(sex_last_values[name][0:max_val])
-        label_gender = "sex: {}".format(GENDER_LABELS[int(mean_gen)])
+        label_gender = "sex: {}".format(GENDER_LABELS[int(mean_sex)])
         draw_label(image, (0, image.shape[0]-30), label_gender)
-
-        mean_race = mode(race_last_values[name][0:max_val])
-        label_race = "race: {}".format(RACES_LABELS[int(mean_race * 0.5)])
+        label_race = "race: {}".format(RACES_LABELS[int(mean_rac * 0.5)])
         draw_label(image, (0, image.shape[0]-45), label_race)
-
-        mean_emotion = mode(emotion_last_values[name][0:max_val])
-        label_emotion = "emotion: {}".format(EMOTION_LABELS_BIN[int(mean_emotion)])
+        label_emotion = "emotion: {}".format(EMOTION_LABELS_BIN[int(mean_emo)])
         draw_label(image, (0, image.shape[0]-60), label_emotion)
-
-        print("time drowing:", str((datetime.datetime.now() - start).total_seconds()))
-
-        worker = dict()
-        worker["name"] = kostyName[name]
-        worker["carModels"] = carModels[name]
-        worker["gasStation"] = gasStation[name]
-        worker["indexes"] = indexes[name]
-        worker["sails"] = sails[name]
-        worker["recommendations"] = recomendations[name]
-        mq_send(json.dumps(worker))
-
-        end = datetime.datetime.now()
-        label_fps = f"FPS: {1 / (end - start).total_seconds():.2f}"
-        draw_label(image, (0, image.shape[0] - 75), label_fps)
-
+        label_person_id = "person id: {}".format(mode_person_id)
+        draw_label(image, (0, image.shape[0]-75), label_person_id)
+        label_proc_time = "proc time ms: {}".format(int((datetime.datetime.now() - start).total_seconds()*1000))
+        draw_label(image, (0, image.shape[0]-90), label_proc_time)
+        cv2.rectangle(image, (face_left, face_top), (face_right, face_bottom), color=(230, 230, 230), thickness=1) # Рисуем рамку вокруг лица
         image = cv2.resize(image, (0, 0), fx=2, fy=2)
         cv2.imshow("YOLOv8 Tracking", image)
-        if cv2.waitKey(10) & 0xFF == ord('q'):
-            break
 
 
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
-ACCUMULATION_COUNT= 50
-SIZE = 48
-transform = transforms.Compose([
-    transforms.Resize((SIZE, SIZE)),
-    transforms.ToTensor(),
-    transforms.Normalize((0.5,), (0.5,))
-])
-
-print("Models initialization:")
-model_person = YOLO('../models/yolov8n.pt')
-model_person.to("cuda")
-print("Person model initialized")
-
-model_face = YOLO('../models/yolov8n-face.pt')
-model_person.to("cuda")
-print("Face model initialized")
-
-# tracker = DeepSort(max_age=50) ## ToDo начала падать. нужно разобраться почему
-print("DeepSort tracker have initialized")
-
-model_age = models.AgeEstimatorModel()
-model_age.load_state_dict(torch.load("../models/age_model_weights.pth", map_location=device))
-model_age.eval()
-print("Age model have initialized")
-
-model_gen = models.SexEstimatorModel()
-model_gen.load_state_dict(torch.load("../models/sex_model_weights.pth", map_location=device))
-model_gen.eval()
-print("Gender model have initialized")
-
-model_rac = models.RaceEstimatorModel(5)
-model_rac.load_state_dict(torch.load("../models/race_model_weights.pth", map_location=device))
-model_rac.eval()
-print("Race model have initialized")
-
-model_emo = models.EmotionBinEstimatorModel(3)
-model_emo.load_state_dict(torch.load("../models/emotion_bin_model_weights.pth", map_location=device))
-model_emo.eval()
-print("Emotion model have initialized")
-
+        # # ОТПРАВКА СООБЩЕНИЯ
+        # worker = dict()
+        # worker["embedding"] = embedding
+        # worker["carModels"] = carModels
+        # worker["gasStation"] = gasStation
+        # worker["indexes"] = indexes
+        # worker["sails"] = sails
+        # worker["recommendations"] = recomendations
+        # connection.send(worker)

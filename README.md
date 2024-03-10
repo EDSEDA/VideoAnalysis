@@ -10,10 +10,11 @@
 - RESTApi server: `run app.py`
 
 Чтобы сразу имитировать rtsp поток вместо использования /dev/video0:
-`sudo docker run --device=/dev/video0 --network="host" -it mpromonet/v4l2rtspserver:v0.3.8 -I 127.0.0.1 -P 18554 -u test`       
+`sudo docker run --device=/dev/video0 --network="host" -it mpromonet/v4l2rtspserver:v0.3.8 -I 127.0.0.1 -P 18554 -u test` 
+Проверить предыдущее действие можно запустив vlc командой: `vlc rtsp://user:pass@127.0.0.1:18554/test`
 Чтобы заработала библиотека OpenCV c gstreamer бэкэндом, необходимо руками собрать эту библиотеку:
 Для python:         
-* `git submodule update --init --recursive --depth 1`     
+* `git submodule update --init --recursive --depth 1`
 * `cd opencv-python`      
 * `git checkout origin/master`        
 * `git submodule update --recursive`      
@@ -28,6 +29,3 @@
 Чтобы детекция лица заработала на видеокарте необходимо собрать библиотеку dlib под cuda:
 cmake .. -DDLIB_USE_CUDA=1 -DUSE_AVX_INSTRUCTIONS=1
 
-### Description
-
-![Work scheme](./doc/work_scheme.png)

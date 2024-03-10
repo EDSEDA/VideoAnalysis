@@ -1,35 +1,26 @@
 import cv2
-import numpy as np
-import time
-import json
 import yaml
 import sys
 sys.path.append('..')
 
-# from keras.models import load_model
-# from datetime import datetime
-# from threading import Thread, Lock
-# from api.rabbit import mq_send
-from api.config import EMOTION_LABELS, paths
-
+# from connection import connection
 import predictor
 
-with open(paths.CONFIG_PATH, "r") as stream:
+CONFIG_PATH: str = "../cfg/emotion_detector.yaml"
+
+# Чтение конфига
+with open(CONFIG_PATH, "r") as stream:
     try:
         config = yaml.safe_load(stream)
     except yaml.YAMLError as exc:
         print(exc)
 
-send_period_s = int(config['send_period_s'])
-# for worker in config['workers']:
-#     worker_id = int(worker['id'])
-#     video_driver_path = worker['video_driver_path']
-#     Thread(target=try_detect_frame, kwargs={'worker_id': worker_id, 'video_driver_path': video_driver_path}).run()
+gst_stream = config["gst_stream"]
+kafka_addr = config["kafka_addr"]
+kafka_topic = config["kafka_topic"]
 
-worker = config['workers'][0]
-worker_id = int(worker['id'])
-gst_stream = worker['gst_stream']
+# connection.init(kafka_addr, kafka_topic)
 cap = cv2.VideoCapture(gst_stream)
-predictor.try_detect_frame(worker_id, cap)
+predictor.try_detect_frame(cap)
 
 print("cv detector was closed")

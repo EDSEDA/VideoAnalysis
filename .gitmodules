@@ -4,3 +4,6 @@
 [submodule "thirdparty/dlib"]
 	path = thirdparty/dlib
 	url = https://github.com/davisking/dlib.git
+[submodule "api"]
+	path = api
+	url = git@github.com:EDSEDA/api.git
