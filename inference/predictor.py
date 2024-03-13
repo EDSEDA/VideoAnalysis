@@ -5,12 +5,17 @@ from collections import defaultdict
 from statistics import mode, mean
 
 from PIL import Image
-import cv2
 import tensorflow as tf
 from deep_sort_realtime.deepsort_tracker import DeepSort
 import face_recognition
 
+import cv2
 from init import *
+
+from grifon.video_analysis.schema import VideoAnalysMessage
+from grifon.video_analysis.enums import SexEnum
+from grifon.video_analysis.enums import RaceEnum
+from grifon.video_analysis.enums import EmotionEnum
 
 def to_grayscale_then_rgb(image):
     image = tf.image.rgb_to_grayscale(image)
@@ -92,12 +97,12 @@ def identify(image):
         matches = face_recognition.compare_faces(identified_face_embeddings, face_embedding, tolerance=0.57)  # За настройку определения похожих эмбедингов отвечает коэффициент tolerance
         name_id = int(time.time() * 10e6)
 
-        if False in matches:
-            identified_face_embeddings.append(face_embedding)
-            identified_person_ids.append(name_id)
-        else:  # Если человек не был идентицицирован ранее, то добавляем его в список идентифицированных как нового
+        if True in matches:
             first_match_index = matches.index(True)
             name_id = identified_person_ids[first_match_index]
+        else:  # Если человек не был идентицицирован ранее, то добавляем его в список идентифицированных как нового
+            identified_face_embeddings.append(face_embedding)
+            identified_person_ids.append(name_id)
 
         person_ids.append(name_id)
 
@@ -113,6 +118,10 @@ def draw_label(image, point, label, font=cv2.FONT_HERSHEY_SIMPLEX, font_scale=0.
     cv2.putText(image, label, point, font, font_scale, (255, 255, 255), thickness, lineType=cv2.LINE_AA)
 
 def try_detect_frame(cap):
+    global identified_person_frames_counter
+    global analyzed_person_frames_counter
+    global last_identified_person_id
+
     while (True):
 
         # ПРИЕМ ВИДЕО
@@ -139,9 +148,10 @@ def try_detect_frame(cap):
 
         detected_faces = [] # left, top, right, bottom
         for person in facesList:
-            person_coords = person.boxes[0].xyxy.tolist()[0] # todo разобраться когда boxes не имеет значений
-            coords = int(person_coords[0]), int(person_coords[1]), int(person_coords[2]), int(person_coords[3])
-            detected_faces.append(coords)
+            if len (person.boxes) != 0:
+                person_coords = person.boxes[0].xyxy.tolist()[0] # todo разобраться когда boxes не имеет значений
+                coords = int(person_coords[0]), int(person_coords[1]), int(person_coords[2]), int(person_coords[3])
+                detected_faces.append(coords)
 
         max_area = 0
         face_left, face_top, face_right, face_bottom = 0, 0, 0, 0
@@ -163,8 +173,8 @@ def try_detect_frame(cap):
         current_person_id = person_ids[0] # Даже если на камеру попало 2 лица, то берем просто первое из них
 
         identified_person_ids[identified_person_frames_counter % identified_required_person_frames] = current_person_id
-        identified_person_frames_count = identified_required_person_frames if (identified_person_frames_counter / identified_required_person_frames != 0) else identified_person_frames_counter % identified_required_person_frames
-        mode_person_id = mode(identified_person_ids[0:identified_person_frames_count]) # Получаем моду из айдишников последних n эмбеддингов
+        identified_person_frames_count = identified_required_person_frames if (identified_person_frames_counter // identified_required_person_frames != 0) else identified_person_frames_counter % identified_required_person_frames
+        mode_person_id = mode(identified_person_ids[0:identified_person_frames_count+1]) # Получаем моду из айдишников последних n эмбеддингов
 
         if mode_person_id != last_identified_person_id: # Если айди лица новый, то сбрасываем счетчик фреймов для прошлого человека
             analyzed_person_frames_counter = 0
@@ -179,11 +189,11 @@ def try_detect_frame(cap):
         sex_last_values[analyzed_person_frames_counter % analyzed_required_person_frames] = pred_sex
         rac_last_values[analyzed_person_frames_counter % analyzed_required_person_frames] = pred_rac
         emo_last_values[analyzed_person_frames_counter % analyzed_required_person_frames] = pred_emo
-        analyzed_person_frames_count = analyzed_required_person_frames if (analyzed_person_frames_counter / analyzed_required_person_frames != 0) else analyzed_person_frames_counter % analyzed_required_person_frames
-        mean_age = mean(age_last_values[0:analyzed_person_frames_count]) # Получаем моду из айдишников последних n эмбеддингов
-        mean_sex = mode(sex_last_values[0:analyzed_person_frames_count])
-        mean_rac = mode(rac_last_values[0:analyzed_person_frames_count])
-        mean_emo = mode(emo_last_values[0:analyzed_person_frames_count])
+        analyzed_person_frames_count = analyzed_required_person_frames if (analyzed_person_frames_counter // analyzed_required_person_frames != 0) else analyzed_person_frames_counter % analyzed_required_person_frames
+        mean_age = mean(age_last_values[0:analyzed_person_frames_count + 1]) # Получаем моду из айдишников последних n эмбеддингов
+        mean_sex = mode(sex_last_values[0:analyzed_person_frames_count + 1])
+        mean_rac = mode(rac_last_values[0:analyzed_person_frames_count + 1])
+        mean_emo = mode(emo_last_values[0:analyzed_person_frames_count + 1])
 
         identified_person_frames_counter += 1
         analyzed_person_frames_counter += 1
@@ -196,7 +206,7 @@ def try_detect_frame(cap):
         draw_label(image, (0, image.shape[0]-15), label_age)
         label_gender = "sex: {}".format(GENDER_LABELS[int(mean_sex)])
         draw_label(image, (0, image.shape[0]-30), label_gender)
-        label_race = "race: {}".format(RACES_LABELS[int(mean_rac * 0.5)])
+        label_race = "race: {}".format(RACES_LABELS[int(mean_rac)])
         draw_label(image, (0, image.shape[0]-45), label_race)
         label_emotion = "emotion: {}".format(EMOTION_LABELS_BIN[int(mean_emo)])
         draw_label(image, (0, image.shape[0]-60), label_emotion)
@@ -210,12 +220,17 @@ def try_detect_frame(cap):
 
 
 
-        # # ОТПРАВКА СООБЩЕНИЯ
-        # worker = dict()
-        # worker["embedding"] = embedding
-        # worker["carModels"] = carModels
-        # worker["gasStation"] = gasStation
-        # worker["indexes"] = indexes
-        # worker["sails"] = sails
-        # worker["recommendations"] = recomendations
-        # connection.send(worker)
+        # ОТПРАВКА СООБЩЕНИЯ
+
+        message = VideoAnalysMessage(
+            embedding = face_embeddings[0].tolist(),
+            person_id = mode_person_id,
+            age = int(mean_age),
+            sex = SexEnum(GENDER_LABELS[int(mean_sex)]),
+            race = RaceEnum(RACES_LABELS[int(mean_rac)]),
+            emotion = EmotionEnum(EMOTION_LABELS_BIN[int(mean_emo)]),
+        )
+        kafka_client.send_message(message.json())
+
+    cap.release()
+    cv2.destroyAllWindows()

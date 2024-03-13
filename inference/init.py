@@ -2,6 +2,8 @@ from ultralytics import YOLO
 import torch
 from torchvision import transforms
 
+import grifon.mqbroker.kafka_client as kafka
+import grifon.config as cfg
 import models
 
 GENDER_LABELS = ['male', 'female']
@@ -68,3 +70,5 @@ model_emo = models.EmotionBinEstimatorModel(3)
 model_emo.load_state_dict(torch.load("../models/emotion_bin_model_weights.pth", map_location=device))
 model_emo.eval()
 print("Emotion model have initialized")
+
+kafka_client = kafka.KafkaClient(topic=cfg.settings.VIDEO_ANALYSIS_TOPIC)
