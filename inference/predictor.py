@@ -117,7 +117,7 @@ def draw_label(image, point, label, font=cv2.FONT_HERSHEY_SIMPLEX, font_scale=0.
     cv2.rectangle(image, (x, y - size[1]), (x + size[0], y), (255, 0, 0), cv2.FILLED)
     cv2.putText(image, label, point, font, font_scale, (255, 255, 255), thickness, lineType=cv2.LINE_AA)
 
-def try_detect_frame(cap):
+def try_detect_frame(cap, cash_register_id):
     global identified_person_frames_counter
     global analyzed_person_frames_counter
     global last_identified_person_id
@@ -223,6 +223,7 @@ def try_detect_frame(cap):
         # ОТПРАВКА СООБЩЕНИЯ
 
         message = VideoAnalysMessage(
+            cash_register_id = cash_register_id,
             embedding = face_embeddings[0].tolist(),
             person_id = mode_person_id,
             age = int(mean_age),

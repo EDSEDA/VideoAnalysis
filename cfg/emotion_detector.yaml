@@ -1,3 +1,4 @@
 gst_stream: "rtspsrc location=rtsp://127.0.0.1:18554/test user-id=user user-pw=pass latency=0 ! rtpjitterbuffer drop-on-latency=true ! decodebin ! videoconvert ! appsink"
 kafka_addr: "127.0.0.1:9092"
 kafka_topic: "video_data"
+cash_register_id: 1

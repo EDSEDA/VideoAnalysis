@@ -19,9 +19,12 @@ with open(CONFIG_PATH, "r") as stream:
 gst_stream = config["gst_stream"]
 kafka_addr = config["kafka_addr"]
 kafka_topic = config["kafka_topic"]
+cash_register_id = config["cash_register_id"]
+
+
 
 cap = cv2.VideoCapture(gst_stream)
-predictor.try_detect_frame(cap)
+predictor.try_detect_frame(cap, cash_register_id)
 cap.release()
 cv2.destroyAllWindows()
 
