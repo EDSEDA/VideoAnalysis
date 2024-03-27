@@ -1,0 +1,6 @@
+[core]
+    remote = grifon
+['remote "grifon"']
+    url = gdrive://18ZcB-GjivhdO2LkZFKZ4niACshUyTuGu
+    gdrive_acknowledge_abuse = true
+    gdrive_use_service_account = true
