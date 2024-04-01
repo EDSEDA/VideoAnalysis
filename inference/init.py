@@ -1,6 +1,7 @@
 from ultralytics import YOLO
 import torch
 from torchvision import transforms
+import yaml
 
 import grifon.mqbroker.kafka_client as kafka
 import grifon.config as cfg
@@ -10,6 +11,19 @@ GENDER_LABELS = ['male', 'female']
 RACES_LABELS = ['white', 'black', 'asian', 'indian', 'others']
 EMOTION_LABELS = ['anger', 'disgust', 'fear', 'happy', 'neutral', 'sadness', "surprise"]
 EMOTION_LABELS_BIN = ['negative', 'neutral', 'positive']
+CONFIG_PATH: str = "cfg/emotion_detector.yaml"
+
+# Чтение конфига
+with open(CONFIG_PATH, "r") as stream:
+    try:
+        config = yaml.safe_load(stream)
+    except yaml.YAMLError as exc:
+        print(exc)
+
+gst_stream = config["gst_stream"]
+kafka_addr = config["kafka_addr"]
+kafka_topic = config["kafka_topic"]
+cash_register_id = config["cash_register_id"]
 
 # Переменные для реализации идентфикации
 last_identified_person_id = 0
@@ -40,11 +54,11 @@ transform = transforms.Compose([
 ])
 
 print("Models initialization:")
-model_person = YOLO('../models/yolov8n.pt')
+model_person = YOLO('models/video/yolov8n.pt')
 model_person.to("cuda")
 print("Person model initialized")
 
-model_face = YOLO('../models/yolov8n-face.pt')
+model_face = YOLO('models/video/yolov8n-face.pt')
 model_face.to("cuda")
 print("Face model initialized")
 
@@ -52,23 +66,23 @@ print("Face model initialized")
 print("DeepSort tracker have initialized")
 
 model_age = models.AgeEstimatorModel()
-model_age.load_state_dict(torch.load("../models/age_model_weights.pth", map_location=device))
+model_age.load_state_dict(torch.load("models/video/age_model_weights.pth", map_location=device))
 model_age.eval()
 print("Age model have initialized")
 
 model_gen = models.SexEstimatorModel()
-model_gen.load_state_dict(torch.load("../models/sex_model_weights.pth", map_location=device))
+model_gen.load_state_dict(torch.load("models/video/sex_model_weights.pth", map_location=device))
 model_gen.eval()
 print("Gender model have initialized")
 
 model_rac = models.RaceEstimatorModel(5)
-model_rac.load_state_dict(torch.load("../models/race_model_weights.pth", map_location=device))
+model_rac.load_state_dict(torch.load("models/video/race_model_weights.pth", map_location=device))
 model_rac.eval()
 print("Race model have initialized")
 
 model_emo = models.EmotionBinEstimatorModel(3)
-model_emo.load_state_dict(torch.load("../models/emotion_bin_model_weights.pth", map_location=device))
+model_emo.load_state_dict(torch.load("models/video/emotion_bin_model_weights.pth", map_location=device))
 model_emo.eval()
 print("Emotion model have initialized")
 
-kafka_client = kafka.KafkaClient(topic=cfg.settings.VIDEO_ANALYSIS_TOPIC)
+kafka_client = kafka.KafkaClient(kafka_addr)

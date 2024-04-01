@@ -11,8 +11,9 @@ import face_recognition
 
 import cv2
 from init import *
+import torch_tensorrt
 
-from grifon.video_analysis.schema import VideoAnalysMessage
+from grifon.video_analysis.schema import VideoAnalysisMessage
 from grifon.video_analysis.enums import SexEnum
 from grifon.video_analysis.enums import RaceEnum
 from grifon.video_analysis.enums import EmotionEnum
@@ -117,7 +118,7 @@ def draw_label(image, point, label, font=cv2.FONT_HERSHEY_SIMPLEX, font_scale=0.
     cv2.rectangle(image, (x, y - size[1]), (x + size[0], y), (255, 0, 0), cv2.FILLED)
     cv2.putText(image, label, point, font, font_scale, (255, 255, 255), thickness, lineType=cv2.LINE_AA)
 
-def try_detect_frame(cap, cash_register_id):
+def try_detect_frame(cap):
     global identified_person_frames_counter
     global analyzed_person_frames_counter
     global last_identified_person_id
@@ -221,8 +222,7 @@ def try_detect_frame(cap, cash_register_id):
 
 
         # ОТПРАВКА СООБЩЕНИЯ
-
-        message = VideoAnalysMessage(
+        message = VideoAnalysisMessage(
             cash_register_id = cash_register_id,
             embedding = face_embeddings[0].tolist(),
             person_id = mode_person_id,
@@ -231,7 +231,8 @@ def try_detect_frame(cap, cash_register_id):
             race = RaceEnum(RACES_LABELS[int(mean_rac)]),
             emotion = EmotionEnum(EMOTION_LABELS_BIN[int(mean_emo)]),
         )
-        kafka_client.send_message(message.json())
+        kafka_client.send_message(kafka_topic, message)
+        kafka_client.flush()
 
     cap.release()
     cv2.destroyAllWindows()
